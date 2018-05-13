@@ -1,0 +1,277 @@
+﻿@{
+    ViewBag.Title = "Danh mục sàn lan";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="box box-info">
+        <div class="box-header with-border text-red">
+            <i class="fa fa-list-alt"></i>
+            <h4 class="box-title text-bold">Danh sách sà lan</h4>
+        </div><!-- /.box-header -->
+        <div class="box-body form-inline">
+            <div class="form-group">
+                <input id="input-filter" type="text" placeholder="Nhập từ khóa tra cứu..." class="form-control" style="width:200px;" />
+                <input id="btn-search" type="button" value="Tra cứu" class="btn btn-primary btn-sm" />
+            </div>
+        </div>
+        <div class="box-body box-barges"></div><!-- /.box-products -->
+        <div class="box-body box-barges-footer"></div><!-- /.box-paging -->
+    </div>
+</section>
+<!-- /. Main content -->
+@section Styles {
+    @Styles.Render("~/Content/bootstrap-dialog")
+}
+
+@section Scripts {
+    @Scripts.Render("~/Bundles/bootstrap-dialog")
+
+    <script>
+
+        // Global vars
+        var g_page_index = 1;
+        var g_page_total = 1;
+
+        // Load page complete
+        $(document).ready(function () {
+            showLoadingStatus();
+            ajaxLoadBarges(g_page_index);
+
+            $("#btn-search").click(function () {
+                g_page_index = 1;
+                ajaxLoadBarges(g_page_index);
+            });
+        })
+        
+
+        // Ajax to load & display product list
+        function ajaxLoadBarges(pageIndex) {
+            var filter = $("#input-filter").val();
+            $.ajax({
+                url: '/Barge/GetBarges/?filter=' + filter + '&pageIndex=' + pageIndex,
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                success: function (data) {
+                    if (data.Error == 0) {
+                        console.debug('dbg', JSON.stringify(data));
+                        // update global page index value
+                        g_page_index = data.PageIndex;
+                        g_page_total = data.PageTotal;
+                        // show barge list
+                        showBargesList(
+                            data.Barges,
+                            data.BargesCount,
+                            data.PageIndex,
+                            data.PageSize,
+                            data.PageTotal);
+                    }
+                    else {
+                        $(".box-barge-footer").html("<span class='text-danger'>Lỗi " + data.Message + "</span>");
+                    }
+                },
+                error: function (xhr) {
+                    $(".box-barge-footer").html("<span class='text-danger'>Lỗi " + xhr.responseText + "</span>");
+                }
+            });
+
+            return false;
+        }
+
+
+        // Navigate to next produtcs page
+        function goToNextPage() {
+            if (g_page_index < g_page_total) {
+                g_page_index++;
+                ajaxLoadBarges(g_page_index);
+            }
+            return false;
+        }
+
+
+        // Navigate to previous produtcs page
+        function goToPrevPage() {
+            if (g_page_index > 1) {
+                g_page_index--;
+                ajaxLoadBarges(g_page_index);
+            }
+            return false;
+        }
+
+
+        // Function to show ajax loading status
+        function showLoadingStatus() {
+            var container = $(".box-barges");
+            var html = '';
+            html += '            <i class="fa fa-refresh fa-spin text-green"></i>\r\n';
+            html += '            <span class="text-green" style="margin-left:4px;">Đang nạp danh sách sà lan...</span>\r\n';
+            $(container).html(html);
+        }
+
+
+        // Function to show barges list
+        function showBargesList(barges, bargesCount, pageIndex, pageSize, pageTotal) {
+            var container = $(".box-barges");
+            var container_footer = $(".box-barges-footer");
+            var html = '';
+            var html_footer = '';
+            var startNum = (pageIndex - 1) * pageSize;
+
+            // Generate barges table html
+            html += '    <table class="table table-bordered table-nonfluid" style="min-width:600px;">\r\n';
+            html += '        <tbody>\r\n';
+            html += '            <tr class="bg-yellow">\r\n';
+            html += '               <th class="text-nowrap text-center">STT</th>\r\n';
+            html += '                <th class="text-nowrap">Số sà lan</th>\r\n';
+            html += '                <th class="text-nowrap">Khối bán</th>\r\n';
+            html += '                <th class="text-nowrap">Khối mỏ Cát lấp</th>\r\n';
+            html += '                <th class="text-nowrap">Khối mỏ Cát vàng</th>\r\n';
+            html += '                <th class="text-nowrap">Chú thích</th>\r\n';
+            html += '                <th class="text-nowrap">Thao tác</th>\r\n';
+            html += '            </tr>\r\n';
+
+            // generate table data rows
+            $.each(barges, function (index, element) {
+                startNum++;
+                html += '            <tr class="barges-row-item">\r\n';
+                html += '                <td class=" text-center">' + startNum + '</td>\r\n';
+                html += '                <td>' + element.BargeCode + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.VolumeRevenue.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.VolumePurchaseFillingSand.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.VolumePurchaseGoldSand.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td>' + element.Description + '</td>\r\n';
+                html += '                <td class="text-nowrap">\r\n';
+                html += '                    <a href="/Barge/Edit/' + element.BargeId + '" class="btn btn-xs btn-success">Sửa</a>\r\n';
+                html += '                    <a href="#" class="btn btn-xs btn-danger" onclick="return ajaxDeleteBarge(' + element.BargeId + ', \'' + element.BargeCode + '\', $(this).parent().parent())">Xóa</a>\r\n';
+                html += '                </td>\r\n';
+                html += '            </tr>\r\n';
+            })
+
+            // generate paging row
+            if (pageTotal > 1) {
+                html += '            <tr class="barges-row-item">\r\n';
+                html += '                <td colspan="7">\r\n';
+                html += '                    <ul class="pagination pagination-sm no-margin inline pull-right">\r\n';
+                html += '                        <li><a href="#" onclick="return goToPrevPage()">«</a></li>\r\n';
+                for (var i = 1; i <= pageTotal; i++) {
+                    if (i == g_page_index) {
+                        html += '                       <li><span class="text-blue">' + i + '</span></li>\r\n';
+                    } else {
+                        html += '                       <li><a href="#" onclick="return ajaxLoadBarges(' + i + ')">' + i + '</a></li>\r\n';
+                    }
+                }
+                html += '                        <li><a href="#" onclick="return goToNextPage()">»</a></li>\r\n';
+                html += '                    </ul>\r\n';
+                html += '                </td>\r\n';
+                html += '            </tr>\r\n';
+                html += '       </tbody>\r\n';
+                html += '    </table>\r\n';
+            }
+            // show products table
+            $(container).html(html);
+
+            // generate products table footer html
+            if (bargesCount > 0) {
+                html_footer += '        Tổng cộng: <span class="text-danger">' + bargesCount + '</span>';
+            }
+            else {
+                html_footer += '        <span class="text-danger">Không có thông tin sà lan nào!</span>';
+            }
+
+            console.debug("DBG", html_footer);
+            // show products table footer
+            $(container_footer).html(html_footer);
+        }
+
+
+        // Ajax delete barge
+        function ajaxDeleteBarge(bargeId, bargeCode, element) {
+            // show confirmed dialog
+            BootstrapDialog.show({
+                type: BootstrapDialog.TYPE_WARNING,
+                message: 'Bạn có muốn xóa sà lan [' + bargeCode + '] không?',
+                buttons: [{
+                    label: 'Xóa sà lan',
+                    cssClass: 'btn-danger btn-sm',
+                    action: function (dialog) {
+                        $.ajax({
+                            url: '/Barge/Delete/' + bargeId,
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+                            success: function (data) {
+                                if (data.Error == 0) {
+                                    BootstrapDialog.show({
+                                        type: BootstrapDialog.TYPE_SUCCESS,
+                                        title: "Xóa thông tin sà lan",
+                                        message: data.Message,
+                                        buttons: [{
+                                            label: "Đóng",
+                                            cssClass: "btn-primary btn-sm",
+                                            action: function (dialog) {
+                                                dialog.close();
+                                            }
+                                        }]
+                                    });
+
+                                    // remove deleted row
+                                    $(element).remove();
+                                }
+                                else {
+                                    BootstrapDialog.show({
+                                        type: BootstrapDialog.TYPE_WARNING,
+                                        title: "Lỗi xóa thông tin sà lan",
+                                        message: data.Message,
+                                        buttons: [{
+                                            label: "Đóng",
+                                            cssClass: "btn-primary btn-sm",
+                                            action: function (dialog) {
+                                                dialog.close();
+                                            }
+                                        }]
+                                    });
+                                }
+                            },
+                            error: function (xhr) {
+                                BootstrapDialog.show({
+                                    title: "Lỗi xóa thông tin sà lan",
+                                    message: xhr.responseText,
+                                    buttons: [{
+                                        label: "Đóng",
+                                        cssClass: "btn-primary btn-sm",
+                                        action: function (dialog) {
+                                            dialog.close();
+                                        }
+                                    }]
+                                });
+                            }
+                        });
+                        dialog.close();
+                    }
+                }, {
+                    label: 'Không xóa',
+                    cssClass: 'btn-primary btn-sm',
+                    action: function (dialog) {
+                        dialog.close();
+                    }
+                }]
+            });
+            return false;
+        }
+
+    </script>
+}
+

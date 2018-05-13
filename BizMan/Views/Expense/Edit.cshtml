@@ -1,0 +1,116 @@
+﻿@model BizMan.Models.EditExpenseViewModel
+
+@{
+    ViewBag.Title = "Cập nhật khoản chi";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+<!-- Main content -->
+<section class="content">
+    <div class="row">
+        <div class="col-md-8">
+            <!-- quick email widget -->
+            <div class="box box-info">
+                <div class="box-header with-border text-red">
+                    <i class="fa fa-plus-square"></i>
+                    <h4 class="box-title text-bold">Cập nhật khoản chi</h4>
+                    <!-- tools box -->
+                    <div class="box-tools pull-right">
+                        <button class="btn btn-box-tool" data-widget="collapse" data-toggle="tooltip" title="" data-original-title="Collapse"><i class="fa fa-caret-up"></i></button>
+                    </div>
+                </div>
+
+                @using (Html.BeginForm())
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.ValidationSummary(true)
+                    @Html.HiddenFor(model => model.ExpenseId)
+
+                    <div class="box-body form-horizontal">
+                        <div class="form-group row">
+                            <div class="control-label col-sm-3">
+                                Ngày chi:
+                            </div>
+                            <div class="editor-field col-sm-9">
+                                @Html.TextBoxFor(model => model.Date, new { @class = "form-control text-center date-picker", @readonly = "readonly", @style = "width:100px;" })
+                                @Html.ValidationMessageFor(model => model.Date)
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="control-label col-sm-3">
+                                Tên khoản chi:
+                            </div>
+                            <div class="editor-field col-sm-9">
+                                @Html.TextBoxFor(model => model.Name, new { @class = "form-control", @placeholder = "Nhập tên khoản chi" })
+                                @Html.ValidationMessageFor(model => model.Name)
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="control-label col-sm-3">
+                                Số tiền chi:
+                            </div>
+                            <div class="editor-field col-sm-9">
+                                @Html.TextBoxFor(model => model.Amount, new { @class = "form-control text-right number-input", @placeholder = "0", @style = "width:100px;" })
+                                @Html.ValidationMessageFor(model => model.Amount)
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="control-label col-sm-3">
+                                Ghi chú:
+                            </div>
+                            <div class="editor-field col-sm-9">
+                                @Html.TextAreaFor(model => model.Description, new { @class = "form-control", @placeholder = "Nhập ghi chú nếu có", @rows = "4" })
+                                @Html.ValidationMessageFor(model => model.Description)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="editor-field col-sm-9 col-sm-offset-3">
+                            <button class="btn btn-primary" type="submit" style="width:120px;">Cập nhật <i class="fa fa-arrow-circle-right"></i></button>
+                            <button class="btn btn-warning" type="reset" style="margin-left:4px; width:120px;">Nhập lại <i class="fa fa-refresh"></i></button>
+                        </div>
+                    </div>
+                }
+                <br />
+                <div class="clearfix" />
+            </div>
+        </div>
+    </div>
+
+</section><!-- /.content -->
+@section Styles {
+    <link href="~/Scripts/plugins/datepicker/datepicker3.css" rel="stylesheet" />
+}
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+    <script src="~/Scripts/plugins/datepicker/bootstrap-datepicker.js"></script>
+    <script src="~/Scripts/jquery.number.min.js"></script>
+    <script>
+
+        // DOC was loaded
+        $(document).ready(function () {
+
+            $('.date-picker').datepicker({
+                format: 'dd/mm/yyyy',
+                todayBtn: true,
+                todayHighlight: true,
+                autoclose: true
+            });
+
+            $('.number-input').number(true, 0);
+        })
+
+    </script>
+
+}

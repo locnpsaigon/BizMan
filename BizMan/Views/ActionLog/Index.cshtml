@@ -1,0 +1,274 @@
+﻿@{
+    ViewBag.Title = "Log truy cập hệ thống";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="box box-info">
+        <div class="box-header with-border text-red">
+            <i class="fa fa-list-alt"></i>
+            <h4 class="box-title text-bold">Danh thao tác</h4>
+        </div><!-- /.box-header -->
+        <div class="box-body">
+            <div class="form-group form-inline">
+                <input id="date-from" type="text" class="form-control date-picker" readonly="readonly" style="width:100px;" /> -
+                <input id="date-to" type="text" class="form-control date-picker" readonly="readonly" style="width:100px;" />
+                <input id="filter-text" name="filter-text" placeholder="Từ khóa tra cứu" class="form-control" type="text" style="width:210px;" />
+                <a href="#" onclick="return ajaxLoadActionLogs(1);" class="btn btn-sm btn-primary"><i class="fa fa-search"></i></a>
+                <a href="#" onclick="return deleteLogs()" class="btn btn-sm btn-danger">Xóa</a>
+            </div>
+        </div>
+        <div class="box-body box-logs" style="margin-top:-20px;"></div><!-- /.box-logs -->
+        <div class="box-body box-logs-footer"></div><!-- /.box-paging -->
+    </div>
+</section>
+<!-- /. Main content -->
+@section Styles {
+    @Styles.Render("~/Content/bootstrap-dialog")
+    <link href="~/Scripts/plugins/datepicker/datepicker3.css" rel="stylesheet" />
+}
+
+@section Scripts {
+    @Scripts.Render("~/Bundles/bootstrap-dialog")
+    <script src="~/Scripts/plugins/datepicker/bootstrap-datepicker.js"></script>
+    <script>
+
+        // Global vars
+        var g_page_index = 1;
+        var g_page_total = 1;
+
+        // Load page complete
+        $(document).ready(function () {
+            // plugin setup
+            var today = new Date();
+            var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            $('.date-picker').datepicker({
+                format: 'dd/mm/yyyy',
+                todayBtn: true,
+                todayHighlight: true,
+                autoclose: true
+            });
+            $('#date-from').datepicker('setDates', firstDay);
+            $('#date-to').datepicker('setDates', today);
+
+            // init data
+            ajaxLoadActionLogs(g_page_index);
+
+            // event hanlders
+            $('.date-picker').on('change', function (e) {
+                g_page_index = 1;
+                ajaxLoadActionLogs(g_page_index);
+            })
+
+            registerCheckboxEvents();
+        })
+
+        function registerCheckboxEvents() {
+            // register checkboxes events
+            $('.chk-all-items').on('change', function (e) {
+                var checkAllStatus = $(this).prop('checked');
+                $('.chk-log-item').prop('checked', checkAllStatus);
+            })
+
+            $('.chk-log-item').on('change', function (e) {
+                var wasAllChecked = ($('.chk-log-item:not(:checked)').length == 0);
+                $('.chk-all-items').prop('checked', wasAllChecked);
+            })
+        }
+
+        // Navigate to next produtcs page
+        function goToNextPage() {
+            if (g_page_index < g_page_total) {
+                g_page_index++;
+                ajaxLoadActionLogs(g_page_index);
+            }
+            return false;
+        }
+
+
+        // Navigate to previous produtcs page
+        function goToPrevPage() {
+            if (g_page_index > 1) {
+                g_page_index--;
+                ajaxLoadActionLogs(g_page_index);
+            }
+            return false;
+        }
+
+        // Ajax to search orders
+        function ajaxLoadActionLogs(page_index) {
+            var date_from = $('#date-from').val();
+            var date_to = $('#date-to').val();
+            var filter_text = $('#filter-text').val();
+
+            // show loading status
+            showLoadingStatus();
+
+            // query and show data
+            $.ajax({
+                url: '/ActionLog/GetActionLogs/' +
+                    '?dateFrom=' + date_from +
+                    '&dateTo=' + date_to +
+                    '&filterText=' + filter_text +
+                    '&pageIndex=' + page_index,
+                type: 'POST',
+                dataType: 'json',
+                async: false,
+                contentType: 'application/json; charset=utf-8',
+                success: function (data) {
+                    if (data.Error == 0) {
+                        // update global page index value
+                        g_page_index = data.PageIndex;
+                        g_page_total = data.PageTotal;
+
+                        // show action logs
+                        showActionLogs(data.Logs, data.LogsCount, data.PageIndex, data.PageSize, data.PageTotal);
+
+                        registerCheckboxEvents();
+                    }
+                    else {
+                        $('.box-logs').html("<span class='text-danger'>Lỗi " + data.Message + "</span>");
+                    }
+                },
+                error: function (xhr) {
+                    $('.box-logs').html("<span class='text-danger'>Kết nối mạng thất bại!</span>");
+                }
+            });
+
+            return false;
+        }
+
+        // Function to show ajax loading status
+        function showLoadingStatus() {
+            var container = $('.box-logs');
+            var container_footer = $('.box-logs-footer');
+            var html = '';
+            html += '            <i class="fa fa-refresh fa-spin text-green"></i>\r\n';
+            html += '            <span class="text-green" style="margin-left:4px;">Đang nạp danh sách logs...</span>\r\n';
+            $(container).html(html);
+            $(container_footer).html('');
+        }
+
+        // Function to show orders list
+        function showActionLogs(logs, total_logs, page_index, page_size, total_pages) {
+            var container = $('.box-logs');
+            var container_footer = $('.box-logs-footer');
+            var html = '';
+            var html_footer = '';
+            var start_num = (page_index - 1) * page_size;
+
+            // Generate orders table html
+            html += '    <table class="table table-bordered table-nonfluid" style="min-width:500px;">\r\n';
+            html += '        <tbody>\r\n';
+            html += '            <tr class="bg-yellow">\r\n';
+            html += '                <th class="text-nowrap text-center"><input class="chk-all-items" type="checkbox" /></th>\r\n';
+            html += '                <th class="text-nowrap text-center">STT</th>\r\n';
+            html += '                <th class="text-nowrap text-center">Ngày</th>\r\n';
+            html += '                <th class="text-nowrap">Thao tác</th>\r\n';
+            html += '                <th class="text-nowrap">Người dùng</th>\r\n';
+            html += '                <th class="text-nowrap">Địa chỉ IP</th>\r\n';
+            html += '                <th class="text-nowrap">Dữ liệu</th>\r\n';
+            html += '            </tr>\r\n';
+            $.each(logs, function (index, element) {
+                start_num++;
+                var action_date = new Date(element.ActionDate.match(/\d+/)[0] * 1);
+                html += '            <tr class="log-item-row">\r\n';
+                html += '                <th class="text-nowrap text-center"><input type="checkbox" class="chk-log-item" value="' + element.ActionLogId + '" /></th>\r\n';
+                html += '                <td class="text-nowrap text-center">' + start_num + '</td>\r\n';
+                html += '                <td class="text-nowrap text-center">' + formatDateTimeVN(action_date) + '</td>\r\n';
+                html += '                <td class="text-nowrap">' + element.ActionName + '</td>\r\n';
+                html += '                <td class="text-center">' + element.UserName + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.IP + '</td>\r\n';
+                html += '                <td>' + element.ActionData + '</td>\r\n';
+                html += '            </tr>\r\n';
+            })
+            // generate paging row
+            if (total_pages > 1) {
+                html += '            <tr class="barges-row-item">\r\n';
+                html += '                <td colspan="7">\r\n';
+                html += '                    <ul class="pagination pagination-sm no-margin inline pull-right">\r\n';
+                html += '                        <li><a href="#" onclick="return goToPrevPage()">«</a></li>\r\n';
+                for (var i = 1; i <= total_pages; i++) {
+                    if (i == g_page_index) {
+                        html += '                       <li><a href="#" onclick="return false;" class="text-blue">' + i + '</a></li>\r\n';
+                    } else {
+                        html += '                       <li><a href="#" onclick="return ajaxLoadActionLogs(' + i + ')">' + i + '</a></li>\r\n';
+                    }
+                }
+                html += '                        <li><a href="#" onclick="return goToNextPage()">»</a></li>\r\n';
+                html += '                    </ul>\r\n';
+                html += '                </td>\r\n';
+                html += '            </tr>\r\n';
+            }
+            html += '       </tbody>\r\n';
+            html += '    </table>\r\n';
+
+            // show orders table
+            $(container).html(html);
+
+            // generate orders table footer html
+            if (total_logs > 1) {
+                html_footer += '        Tổng cộng: <span class="text-red">' + total_logs + '</span>';
+            }
+            else {
+                html_footer += '        <span class="text-danger">Không có thông tin logs nào!</span>';
+            }
+
+            // show orders table footer
+            $(container_footer).html(html_footer);
+        }
+
+        // Function to delete logs
+        function deleteLogs() {
+
+            // get selected log items
+            var checkedValues = '';
+            $('.chk-log-item:checked').each(function () {
+                if (checkedValues == '') 
+                    checkedValues += $(this).val();
+                else 
+                    checkedValues += ',' + $(this).val();
+            });
+
+            if (checkedValues.length == '')
+                return false;
+
+            // delete all selected log items
+            $.ajax({
+                url: '/ActionLog/Delete?logIds=' + checkedValues,
+                type: 'POST',
+                dataType: 'json',
+                async: false,
+                contentType: 'application/json; charset=utf-8',
+                success: function (data) {
+                    if (data.Error == 0) {
+                        $('.chk-log-item:checked').each(function () {
+                            ajaxLoadActionLogs(g_page_index);
+                        });
+                    }
+                    else {
+                        console.debug('DBG', data.Message);
+                    }
+                },
+                error: function (xhr) {
+                    console.debug('DBG', xhr.responseText);
+                }
+            });
+
+            return true;
+        }
+
+    </script>
+}
+

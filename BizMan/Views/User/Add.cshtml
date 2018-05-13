@@ -1,0 +1,144 @@
+﻿@model BizMan.Models.AddUserViewModel
+
+@{
+    ViewBag.Title = "Tạo tài khoản";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+<!-- Main content -->
+<section class="content">
+
+    <!-- quick email widget -->
+    <div class="box box-info">
+        <div class="box-header with-border text-red">
+            <i class="fa fa-plus-square"></i>
+            <h4 class="box-title text-bold">Nhập thông tin tài khoản</h4>
+            <!-- tools box -->
+            <div class="pull-right box-tools">
+                <button class="btn btn-box-tool" data-widget="collapse" data-toggle="tooltip" title="" data-original-title="Collapse"><i class="fa fa-caret-up"></i></button>
+            </div><!-- /. tools -->
+        </div>
+
+        @using (Html.BeginForm())
+        {
+            @Html.AntiForgeryToken()
+            @Html.ValidationSummary(true)
+
+            <!-- account info -->
+            <div class="box-body col-md-8 form-horizontal">
+                <div class="form-group row">
+                    <div class="control-label col-sm-3">
+                        Tên đăng nhập:
+                    </div>
+                    <div class="editor-field col-sm-9">
+                        @Html.TextBoxFor(model => model.Username, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(model => model.Username)
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="control-label col-sm-3">
+                        Mật khẩu:
+                    </div>
+                    <div class="editor-field col-sm-9">
+                        @Html.TextBoxFor(model => model.Password, new { @class = "form-control", @type = "password" })
+                        @Html.ValidationMessageFor(model => model.Password)
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="control-label col-sm-3">
+                        Xác nhận mật khẩu:
+                    </div>
+                    <div class="editor-field col-sm-9">
+                        @Html.TextBoxFor(model => model.ConfirmedPassword, new { @class = "form-control", @type = "password" })
+                        @Html.ValidationMessageFor(model => model.ConfirmedPassword)
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="control-label col-sm-3">
+                        Họ:
+                    </div>
+                    <div class="editor-field col-sm-9">
+                        @Html.TextBoxFor(model => model.FirstName, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(model => model.FirstName)
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="control-label col-sm-3">
+                        Tên:
+                    </div>
+                    <div class="editor-field col-sm-9">
+                        @Html.TextBoxFor(model => model.LastName, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(model => model.LastName)
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="control-label col-sm-3">
+                        Email:
+                    </div>
+                    <div class="editor-field col-sm-9">
+                        @Html.TextBoxFor(model => model.Email, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(model => model.Email)
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <div class="editor-field col-sm-9 col-lg-offset-3">
+                        @Html.CheckBoxFor(model => model.IsActive)
+                        Kích hoạt tài khoản?
+                    </div>
+                </div>
+
+            </div>
+            <!-- /.account info -->
+
+            <!-- account permissions info -->
+            <div class="box-body col-md-4" style="padding-left:32px;">
+            @{
+                var roles = (List<BizMan.DAL.Role>)ViewBag.RolesList;
+                if (roles != null)
+                {
+                    foreach (var item in roles)
+                    {
+                        <div class="form-group row">
+                            <div class="editor-field">
+                                <input type="checkbox"
+                                       name="RolesId"
+                                       id="RoleId_@item.RoleId"
+                                       value="@item.RoleId"
+                                       style="margin-left:24px;" />
+                                @item.RoleName
+                            </div>
+                        </div>
+                    }
+                }
+            }
+            </div>
+            <!-- /.account permissions info -->
+
+            <div class="box-body col-md-8">
+                <div class="form-group row">
+                    <div class="editor-field col-sm-9 col-lg-offset-3">
+                        <button class="btn btn-primary" type="submit" style="width:120px;">Tạo tài khoản <i class="fa fa-arrow-circle-right"></i></button>
+                        <button class="btn btn-warning" type="reset" style="width:140px; margin-left:4px;">Nhập lại <i class="fa fa-refresh"></i></button>
+                    </div>
+                </div>
+            </div>
+        }
+        <br />
+        <br />
+        <div class="clearfix" />
+    </div>
+</section><!-- /.content -->
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+}

@@ -1,0 +1,189 @@
+﻿@{
+    ViewBag.Title = "Danh sách tài khoản";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="box box-info">
+        <div class="box-header with-border text-red">
+            <i class="fa fa-list-alt"></i>
+            <h4 class="box-title text-bold">Danh sách tài khoản</h4>
+        </div><!-- /.box-header -->
+        <div class="box-body box-accounts">
+            <i class="fa fa-refresh fa-spin text-green"></i>
+            <span class="text-green" style="margin-left:4px;">Đang nạp danh sách tài khoản...</span>
+        </div><!-- /.box-body -->
+
+        <div class="box-body box-accounts-footer">
+        </div>
+    </div>
+
+</section>
+<!-- /. Main content -->
+@section Styles {
+    @Styles.Render("~/Content/bootstrap-dialog")
+}
+
+@section Scripts {
+    @Scripts.Render("~/Bundles/bootstrap-dialog")
+
+    <script>
+
+        $(document).ready(function () {
+            // load users
+            ajaxLoadUsers();
+        })
+
+        /* AJAX FUNCTION TO LOAD USERS LIST */
+        function ajaxLoadUsers() {
+            $.ajax({
+                url: '/User/GetUsers/',
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                success: function (data) {
+                    if (data.Error == 0) {
+                        // show users list
+                        showUsersList(data.Users);
+                    }
+                    else {
+                        $(".box-accounts").html("<span class='text-danger'>Lỗi " + data.Message + "</span>");
+                    }
+                },
+                error: function (xhr) {
+                    $(".box-accounts").html("<span class='text-danger'>Lỗi " + xhr.responseText + "</span>");
+                }
+            });
+        }
+
+        /* FUNCTION TO DELETE A USER */
+        function ajaxDeleteUser(id, name, element) {
+            // show confirmed dialog
+            BootstrapDialog.show({
+                message: 'Bạn có muốn xóa tài khoản [' + name + '] không?',
+                buttons: [{
+                    label: 'Xóa tài khoản',
+                    cssClass: 'btn-danger btn-sm',
+                    action: function (dialog) {
+                        $.ajax({
+                            url: '/User/Delete/' + id,
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+                            success: function (data) {
+                                if (data.Error == 0) {
+                                    BootstrapDialog.show({
+                                        title: "Xóa tài khoản",
+                                        message: "Xóa tài khoản [" + name + "] thành công!"
+                                    });
+                                    // remove role row item
+                                    $(element).closest(".account-row-item").remove();
+                                }
+                                else {
+                                    BootstrapDialog.show({
+                                        title: "Lỗi xóa chức danh",
+                                        message: data.Message
+                                    });
+                                }
+                            },
+                            error: function (xhr) {
+                                BootstrapDialog.show({
+                                    title: "Lỗi xóa chức danh",
+                                    message: xhr.responseText
+                                });
+                            }
+                        });
+                        dialog.close();
+                    }
+                }, {
+                    label: 'Không xóa',
+                    cssClass: 'btn-primary btn-sm',
+                    action: function (dialog) {
+                        dialog.close();
+                    }
+                }]
+            });
+
+            return false;
+        }
+
+        /* FUNCTION TO DISPLAY USERS TABLE */
+        function showUsersList(users) {
+            var container = $(".box-accounts")
+            var container_summary = $(".box-accounts-footer");
+            var html = '';
+            var html_summary = '';
+            var row_count = 0;
+            // Generate users list table
+            html += '    <table class="table table-bordered table-nonfluid" style="min-width:500px;">\r\n';
+            html += '        <tbody>\r\n';
+            html += '            <tr class="bg-yellow">\r\n';
+            html += '               <th class="text-nowrap text-center">#</th>\r\n';
+            html += '                <th class="text-nowrap">Tài khoản</th>\r\n';
+            html += '                <th class="text-nowrap">Họ tên</th>\r\n';
+            html += '                <th class="text-nowrap">Email</th>\r\n';
+            html += '                <th class="text-nowrap">Trạng thái</th>\r\n';
+            html += '                <th class="text-nowrap">Thao tác</th>\r\n';
+            html += '            </tr>\r\n';
+            $.each(users, function (index, element) {
+                row_count++;
+                if (element.IsActive == 0) {
+                    html += '            <tr class="account-row-item text-gray">\r\n';
+                    html += '                <td class=" text-center">' + row_count + '</td>\r\n';
+                    html += '                <td>' + element.UserName + '</td>\r\n';
+                    html += '                <td>' + element.FullName + '</td>\r\n';
+                    html += '                <td class="">' + element.Email + '</td>\r\n';
+                    html += '                <td class="text-red text-center"><i class="fa fa-lock"></i> Bị khóa</td>\r\n';
+                    html += '                <td>\r\n';
+                    html += '                    <a href="/User/Edit/' + element.UserId + '" class="btn btn-sm btn-success">Sửa</a>\r\n';
+                    html += '                    <a href="#" class="btn btn-sm bg-red" onclick="return ajaxDeleteUser(' + element.UserId + ', \'' + element.UserName + '\', this)">Xóa</a>\r\n';
+                    html += '                </td>\r\n';
+                    html += '            </tr>\r\n';
+                }
+                else {
+                    html += '            <tr class="account-row-item">\r\n';
+                    html += '                <td class=" text-center">' + row_count + '</td>\r\n';
+                    html += '                <td>' + element.UserName + '</td>\r\n';
+                    html += '                <td>' + element.FullName + '</td>\r\n';
+                    html += '                <td>' + element.Email + '</td>\r\n';
+                    html += '                <td class="text-green text-center"><i class="fa fa-unlock"></i> Hoạt động</td>\r\n';
+                    html += '                <td>\r\n';
+                    html += '                    <a href="/User/Edit/' + element.UserId + '" class="btn btn-xs btn-success">Sửa</a>\r\n';
+                    html += '                    <a href="#" class="btn btn-xs btn-danger" onclick="return ajaxDeleteUser(' + element.UserId + ', \'' + element.UserName + '\', this)">Xóa</a>\r\n';
+                    html += '                </td>\r\n';
+                    html += '            </tr>\r\n';
+                }
+            })
+            html += '       </tbody>\r\n';
+            html += '    </table>\r\n';
+
+            // Show users list
+            $(container).html(html);
+
+            // Generate users list summary
+            if (row_count > 0) {
+                html_summary += '        Tổng cộng: <span class="text-red">' + row_count + '</span> tài khoản';
+            }
+            else {
+                html_summary += '        <span class="text-danger">Không có tài khoản nào!</span>';
+            }
+
+            // Show users list summary
+            $(container_summary).html(html_summary);
+        }
+
+    </script>
+
+}

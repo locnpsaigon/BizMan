@@ -1,0 +1,183 @@
+﻿@{
+    ViewBag.Title = "Danh mục đơn vị";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="box box-info">
+        <div class="box-header with-border text-red">
+            <i class="fa fa-list-alt"></i>
+            <h4 class="box-title text-bold">Danh sách đơn vị</h4>
+        </div><!-- /.box-header -->
+        <div class="box-body box-customers"></div><!-- /.box-roles -->
+        <div class="box-body box-customers-summary"></div><!-- /.box-roles-summary -->
+    </div>
+</section>
+<!-- /. Main content -->
+@section Styles {
+    @Styles.Render("~/Content/bootstrap-dialog")
+
+}
+
+@section Scripts {
+    @Scripts.Render("~/Bundles/bootstrap-dialog")
+
+    <script>
+
+        // Load page complete
+        $(document).ready(function () {
+            showLoadingStatus();
+            ajaxLoadCustomers();
+        })
+
+
+
+        // Show loading status
+        function showLoadingStatus() {
+            var container = $(".box-customers");
+            var html_loading = '';
+            html_loading += '            <i class="fa fa-refresh fa-spin text-green"></i>\r\n';
+            html_loading += '            <span class="text-green" style="margin-left:4px;">Đang nạp danh sách đơn vị...</span>\r\n';
+            $(container).html(html_loading);
+        }
+
+
+
+        // Ajax function to load & show roles list
+        function ajaxLoadCustomers() {
+            $.ajax({
+                url: '/Customer/GetAllCustomers',
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                success: function (data) {
+                    if (data.Error == 0) {
+                        // show roles list
+                        console.debug("DBG", JSON.stringify(data.Roles));
+                        showCustomersList(data.Customers);
+                    }
+                    else {
+                        $(".box-roles").html("<span class='text-danger'>Lỗi " + data.Message + "</span>");
+                    }
+                },
+                error: function (xhr) {
+                    $(".box-roles").html("<span class='text-danger'>Lỗi " + xhr.responseText + "</span>");
+                }
+            });
+
+            return false;
+        }
+
+
+        // Show roles list
+        function showCustomersList(customers) {
+            var container = $(".box-customers");
+            var container_summary = $(".box-customers-summary");
+            var html_tb_roles = '';
+            var html_summary = '';
+            var row_count = 0;
+
+            // generate roles table html
+            html_tb_roles += '<table class="table table-bordered table-nonfluid" style="min-width:500px;">\r\n';
+            html_tb_roles += '    <tbody>\r\n';
+            html_tb_roles += '        <tr class="bg-yellow">\r\n';
+            html_tb_roles += '            <th class="text-nowrap text-center">#</th>\r\n';
+            html_tb_roles += '            <th class="text-nowrap">Tên đơn vị</th>\r\n';
+            html_tb_roles += '            <th class="text-nowrap">Mô tả</th>\r\n';
+            html_tb_roles += '            <th class="text-nowrap">Thao tác</th>\r\n';
+            html_tb_roles += '        </tr>\r\n';
+            $.each(customers, function (index, element) {
+                row_count++;
+                html_tb_roles += '        <tr class="role-row-item">\r\n';
+                html_tb_roles += '            <td class="text-center">' + row_count + '</td>\r\n';
+                html_tb_roles += '            <td class="text-nowrap">' + element.CustomerName + '</td>\r\n';
+                html_tb_roles += '            <td>' + element.Description + '</td>\r\n';
+                html_tb_roles += '            <td class="text-nowrap">\r\n';
+                html_tb_roles += '                <a href="/Customer/Edit/' + element.CustomerId + '" class="btn btn-xs btn-success">Sửa</a>\r\n';
+                html_tb_roles += '                <a href="#" class="btn btn-xs btn-danger" onclick="return ajaxDeleteCustomer(' + element.CustomerId + ',\'' + element.CustomerName + '\', this);">Xóa</a>\r\n';
+                html_tb_roles += '                <a href="/Order/Add?customerId=' + element.CustomerId + '" class="btn btn-xs btn-primary">Thêm chuyến</a>\r\n';
+                html_tb_roles += '             </td>\r\n';
+                html_tb_roles += '        </tr>\r\n';
+            })
+            html_tb_roles += '       </tbody>\r\n';
+            html_tb_roles += '    </table>\r\n';
+
+            // show roles table
+            $(container).html(html_tb_roles);
+
+            // generate role list summary html
+            if (row_count > 0) {
+                html_summary += '        Tổng cộng: <span class="text-red">' + row_count + '</span>';
+            }
+            else {
+                html_summary += '        <span class="text-danger">Không có thông tin đơn vị nào!</span>';
+            }
+
+            // show role list summary
+            $(container_summary).html(html_summary);
+        }
+
+
+        function ajaxDeleteCustomer(id, name, element) {
+            // show confirmed dialog
+            BootstrapDialog.show({
+                message: 'Bạn có muốn xóa thông tin đơn vị [' + name + '] không?',
+                buttons: [{
+                    label: 'Xóa đơn vị',
+                    cssClass: 'btn-danger btn-sm',
+                    action: function (dialog) {
+                        $.ajax({
+                            url: '/Customer/Delete/' + id,
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+                            success: function (data) {
+                                if (data.Error == 0) {
+                                    BootstrapDialog.show({
+                                        title: "Xóa đơn vị",
+                                        message: "Xóa đơn vị thành công!"
+                                    });
+                                    // remove role row item
+                                    $(element).closest(".role-row-item").remove();
+                                }
+                                else {
+                                    BootstrapDialog.show({
+                                        title: "Lỗi xóa đơn vị",
+                                        message: data.Message
+                                    });
+                                }
+                            },
+                            error: function (xhr) {
+                                BootstrapDialog.show({
+                                    title: "Lỗi xóa đơn vị",
+                                    message: xhr.responseText
+                                });
+                            }
+                        });
+                        dialog.close();
+                    }
+                }, {
+                    label: 'Không xóa',
+                    cssClass: 'btn-primary btn-sm',
+                    action: function (dialog) {
+                        dialog.close();
+                    }
+                }]
+            });
+
+            return false;
+        }
+
+    </script>
+}

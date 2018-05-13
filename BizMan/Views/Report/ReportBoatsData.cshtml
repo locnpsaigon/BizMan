@@ -1,0 +1,407 @@
+﻿@{
+    ViewBag.Title = "Số liệu ghe";
+    Layout = "~/Views/Shared/Admin.cshtml";
+
+    DateTime dateFrom = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+    DateTime dateTo = new DateTime(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
+
+    var classHiddenAdminColumn = (User != null && User.Roles.Contains("Administrators")) ? "" : "hide-column";
+}
+
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="row">
+        <div class="col-lg-12">
+            <!--boat transport details-->
+            <div class="box box-info" style="min-height:200px;">
+                <div class="box-header with-border text-red">
+                    <h3 class="box-title text-bold text-red">Báo cáo số liệu ghe</h3>
+                    <div class="box-tools pull-right">
+                        <button class="btn btn-box-tool" data-widget="collapse" data-toggle="tooltip" title="" data-original-title="Collapse"><i class="fa fa-caret-up"></i></button>
+                    </div>
+                </div><!-- /.box-header -->
+                <div class="box-body">
+                    <div class="form-group form-inline">
+                        Từ ngày:
+                        <input id="date-from" type="text" value="@dateFrom.ToString("dd/MM/yyyy")" class="form-control date-picker" readonly="readonly" style="width:100px; background-color:white;" />
+                        -
+                        <input id="date-to" type="text" value="@dateTo.ToString("dd/MM/yyyy")" class="form-control date-picker" readonly="readonly" style="width:100px; background-color:white;" />
+                        <select id="select-sand" class="form-control" style="min-width:120px;"></select>
+                        <button id="btn-export" class="btn btn-success btn-sm @classHiddenAdminColumn" type="button" onclick="exportExcel()" style="width:120px;"><i class="fa fa-save"></i> &nbsp; Xuất excel</button>
+                    </div>
+                </div>
+                <div class="col-lg-12">
+                    <!-- Nav tabs -->
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li role="presentation" class="active"><a href="#boat-summary" aria-controls="boat-summary" role="tab" data-toggle="tab">Số liệu ghe</a></li>
+                        <li role="presentation"><a href="#cost-summary" aria-controls="cost-summary" role="tab" data-toggle="tab">Chi phí ghe</a></li>
+                    </ul>
+                    <!-- Tab panes -->
+                    <div class="tab-content">
+                        <div role="tabpanel" class="tab-pane active" id="boat-summary">
+                            <div class="box-boat-report"></div>
+                            <div class="box-boat-report-footer"></div>
+                        </div>
+                        <div role="tabpanel" class="tab-pane box-cost-report" id="cost-summary">
+                            <div class="box-cost-report"></div>
+                            <div class="box-cost-report-footer"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="clearfix"></div>
+            </div>
+        </div>
+
+    </div>
+</section>
+<!-- /. Main content -->
+@section Styles {
+    @Styles.Render("~/Content/bootstrap-dialog")
+    <link href="~/Scripts/plugins/datepicker/datepicker3.css" rel="stylesheet" />
+    <style>
+        .hide-column {
+            display: none !important;
+        }
+    </style>
+}
+
+@section Scripts {
+    @Scripts.Render("~/Bundles/bootstrap-dialog")
+    <script src="~/Scripts/plugins/datepicker/bootstrap-datepicker.js"></script>
+
+    <script>
+
+        var g_sands;
+        var g_transport_data;
+        var g_transport_cost_data;
+
+        // Page was loaded
+        $(document).ready(function () {
+
+            // datepicker setup
+            $('.date-picker').datepicker({
+                format: 'dd/mm/yyyy',
+                todayBtn: true,
+                todayHighlight: true,
+                autoclose: true
+            }).on('changeDate', function (e) {
+                ajaxLoadTransportReport();
+                ajaxLoadTransportCostReport();
+            });
+
+            ajaxLoadSands();
+            ajaxLoadTransportReport();
+            ajaxLoadTransportCostReport();
+
+            // events
+            $('#select-sand').on('change', function (e) {
+                ajaxLoadTransportReport();
+                ajaxLoadTransportCostReport();
+            })
+        })
+
+        // Function to load sands
+        function ajaxLoadSands() {
+            $.ajax({
+                url: '/Sand/GetAllSands',
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                async: false,
+                success: function (data) {
+                    if (data.Error == 0) {
+                        // assign sand data to g_sands global variable
+                        g_sands = data.Sands;
+                        // add sand select options
+                        var select_sand = document.getElementById('select-sand');
+                        $.each(g_sands, function (index, element) {
+                            select_sand.options[select_sand.options.length] = new Option(element.SandName, element.SandId, false, false);
+                        })
+                    }
+                    else {
+                        console.debug("DBG", data.Message)
+                    }
+                },
+                error: function (xhr) {
+                    console.debug("DBG", xhr.responseText)
+                }
+            });
+            return false;
+        }
+
+        // Function to get report data
+        function ajaxLoadTransportReport() {
+            // get input params
+            var date_from = $('#date-from').val();
+            var date_to = $('#date-to').val();
+            var sand_id = $('#select-sand').val();
+
+            showTransportReportLoadingStatus();
+
+            $.ajax({
+                url: '/Report/GetBoatsTransportData?dateFrom=' + date_from + '&dateTo=' + date_to + '&sandId=' + sand_id,
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                async: true,
+                success: function (data) {
+                    if (data.Error == 0) {
+
+                        g_transport_data = data.ReportData;
+
+                        // show stransport report
+                        showTransportReport(g_transport_data);
+                    }
+                    else {
+                        $('.box-boat-report-footer').html(data.Message);
+                    }
+                },
+                error: function (xhr) {
+                    $('.box-boat-report-footer').html(xhr.responseText);
+                }
+            });
+
+            return false;
+        }
+
+        // Function to show report
+        function showTransportReport(data) {
+            var container = $('.box-boat-report');
+            var html = '';
+            html += '<table class="table table-bordered table-nonfluid">\r\n';
+            html += '    <tbody>\r\n';
+            html += '        <tr class="bg-yellow">\r\n';
+            html += '            <th class="text-nowrap text-center">Ngày</th>\r\n';
+            html += '            <th class="text-nowrap">Sà lan</th>\r\n';
+            html += '            <th class="text-nowrap">Khối bán</th>\r\n';
+            html += '            <th class="text-nowrap">Ghe</th>\r\n';
+            html += '            <th class="text-nowrap">Số chuyến</th>\r\n';
+            html += '            <th class="text-nowrap">Khối lẻ</th>\r\n';
+            html += '            <th class="text-nowrap">Khối ghe</th>\r\n';
+            html += '            <th class="text-nowrap">Tổng khối ghe</th>\r\n';
+            html += '        </tr>\r\n';
+
+            var current_row;
+            var grand_total_boat_volume = 0;
+            var current_total_boat_volume = 0;
+            var grand_total_barge_volume = 0;
+
+            $.each(data, function (index, element) {
+                // init current row
+                if (index == 0) {
+                    current_row = element;
+                    grand_total_barge_volume += element.VolumeRevenue;
+                }
+
+                // check new order details row group
+                var is_new_order = (current_row.OrderId != element.OrderId);
+                var is_new_order_group = (current_row.OrderDate != element.OrderDate);
+
+                if (is_new_order_group) {
+                    // show current order details summary
+                    html += '        <tr class="bg-warning text-bold text-green report-row">\r\n';
+                    html += '            <td>Tổng</td>\r\n';
+                    html += '            <td></td>\r\n';
+                    html += '            <td class="text-right">' + current_row.VolumeRevenue.format(0, 3, ',', '.') + '</td>\r\n';
+                    html += '            <td></td>\r\n';
+                    html += '            <td></td>\r\n';
+                    html += '            <td></td>\r\n';
+                    html += '            <td></td>\r\n';
+                    html += '            <td class="text-right">' + current_total_boat_volume.format(0, 3, ',', '.') + '</td>\r\n';
+                    html += '        </tr>\r\n';
+
+                    current_total_boat_volume = 0;
+                    current_total_transport_cost = 0;
+                    grand_total_barge_volume += element.VolumeRevenue;
+                }
+
+                // show order details row
+                var order_date = new Date(element.OrderDate.match(/\d+/)[0] * 1);
+                var total_boat_volume = element.TransportTimes * element.BoatVolume + element.ExtraVolume;
+                var transport_cost = total_boat_volume * element.TransportPrice;
+
+                grand_total_boat_volume += total_boat_volume;
+                current_total_boat_volume += total_boat_volume;
+
+                html += '        <tr>\r\n';
+                if (index == 0 || is_new_order) {
+                    html += '            <td>' + formatDateVN(order_date) + '</td>\r\n';
+                    html += '            <td>' + element.BargeCode + '</td>\r\n';
+                    html += '            <td class="text-right">' + element.VolumeRevenue.format(0, 3, ',', '.') + '</td>\r\n';
+                }
+                else {
+                    html += '            <td></td>\r\n';
+                    html += '            <td></td>\r\n';
+                    html += '            <td></td>\r\n';
+                }
+                html += '            <td>' + element.BoatOwner + '</td>\r\n';
+                html += '            <td class="text-right">' + element.TransportTimes.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '            <td class="text-right">' + element.ExtraVolume.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '            <td class="text-right">' + element.BoatVolume.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '            <td class="text-right">' + total_boat_volume.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '        </tr>\r\n';
+
+                // update current row
+                current_row = element;
+            })
+
+            // show last current order details summary
+            if (current_row != undefined) {
+                html += '        <tr class="bg-warning text-bold text-green report-row">\r\n';
+                html += '            <td>Tổng</td>\r\n';
+                html += '            <td></td>\r\n';
+                html += '            <td class="text-right">' + current_row.VolumeRevenue.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '            <td></td>\r\n';
+                html += '            <td></td>\r\n';
+                html += '            <td></td>\r\n';
+                html += '            <td></td>\r\n';
+                html += '            <td class="text-right">' + current_total_boat_volume.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '        </tr>\r\n';
+            }
+
+            // show grand total row
+            html += '        <tr class="bg-info text-bold">\r\n';
+            html += '            <td>Tổng</td>\r\n';
+            html += '            <td></td>\r\n';
+            html += '            <td class="text-right">' + grand_total_barge_volume.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '            <td></td>\r\n';
+            html += '            <td></td>\r\n';
+            html += '            <td></td>\r\n';
+            html += '            <td></td>\r\n';
+            html += '            <td class="text-right">' + grand_total_boat_volume.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '        </tr>\r\n';
+            html += '    </tbody>\r\n';
+            html += '</table>\r\n';
+
+            // show report
+            $(container).html(html);
+        }
+
+        // Function to show ajax loading status
+        function showTransportReportLoadingStatus() {
+            var container = $('.box-boat-report');
+            var container_footer = $('.box-boat-report-footer');
+            var html = '';
+            html += '            <i class="fa fa-refresh fa-spin text-green"></i>\r\n';
+            html += '            <span class="text-green" style="margin-left:4px;">Đang nạp báo cáo...</span>\r\n';
+            $(container).html(html);
+            $(container_footer).html('');
+        }
+
+        // Function to get report data
+        function ajaxLoadTransportCostReport() {
+            // get input params
+            var date_from = $('#date-from').val();
+            var date_to = $('#date-to').val();
+            var sand_id = $('#select-sand').val();
+
+            showTransportCostLoadingStatus();
+
+            $.ajax({
+                url: '/Report/GetBoatsTransportCostData?dateFrom=' + date_from + '&dateTo=' + date_to + '&sandId=' + sand_id,
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                async: false,
+                success: function (data) {
+                    if (data.Error == 0) {
+
+                        g_transport_cost_data = data.ReportData;
+
+                        // show transport cost report
+                        showTransportCostReport(g_transport_cost_data);
+                    }
+                    else {
+                        $('.box-boat-report-footer').html(data.Message);
+                    }
+                },
+                error: function (xhr) {
+                    $('.box-boat-report-footer').html(xhr.responseText);
+                }
+            });
+
+            return false;
+        }
+
+        function showTransportCostReport(data) {
+            var container = $('.box-cost-report');
+            var html = '';
+            html += '<table class="table table-bordered table-nonfluid">\r\n';
+            html += '    <tbody>\r\n';
+            html += '        <tr class="bg-yellow">\r\n';
+            html += '            <th class="text-nowrap">Số ghe</th>\r\n';
+            html += '            <th class="text-nowrap">Tên ghe</th>\r\n';
+            html += '            <th class="text-nowrap">Số chuyến</th>\r\n';
+            html += '            <th class="text-nowrap">Khối lẻ</th>\r\n';
+            html += '            <th class="text-nowrap">Số khối</th>\r\n';
+            html += '            <th class="text-nowrap">Tổng khối ghe</th>\r\n';
+            html += '            <th class="text-nowrap">Đơn giá</th>\r\n';
+            html += '            <th class="text-nowrap">Thành tiền</th>\r\n';
+            html += '        </tr>\r\n';
+            var grand_total_volumes = 0;
+            var grand_total_amount = 0;
+            $.each(data, function (index, element) {
+                html += '        <tr>\r\n';
+                html += '            <td class="text-nowrap">' + element.BoatCode + '</td>\r\n';
+                html += '            <td class="text-nowrap">' + element.BoatOwner + '</td>\r\n';
+                html += '            <td class="text-right">' + element.TransportTimes.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '            <td class="text-right">' + element.ExtraVolumes.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '            <td class="text-right">' + element.BoatVolume.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '            <td class="text-right">' + element.TotalBoatVolumes.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '            <td class="text-tight">' + element.TransportPrice.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '            <td class="text-right">' + element.TransportCost.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '        </tr>\r\n';
+
+                grand_total_volumes += element.TotalBoatVolumes;
+                grand_total_amount += element.TransportCost;
+            })
+            // add total row
+            html += '        <tr class="bg-info">\r\n';
+            html += '            <td colspan="5">Tổng cộng</td>\r\n';
+            html += '            <td class="text-bold text-right">' + grand_total_volumes.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '            <td></td>\r\n';
+            html += '            <td class="text-bold">' + grand_total_amount.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '        </tr>\r\n';
+
+            html += '    </tbody>\r\n';
+            html += '</table>\r\n';
+
+            $(container).html(html);
+        }
+
+        // Function to show ajax loading status
+        function showTransportCostLoadingStatus() {
+            var container = $('.box-cost-report');
+            var container_footer = $('.box-cost-report-footer');
+            var html = '';
+            html += '            <i class="fa fa-refresh fa-spin text-green"></i>\r\n';
+            html += '            <span class="text-green" style="margin-left:4px;">Đang nạp số liệu ghe...</span>\r\n';
+            $(container).html(html);
+            $(container_footer).html('');
+        }
+
+        // Export excel
+        function exportExcel() {
+            var date_from = $('#date-from').val();
+            var date_to = $('#date-to').val();
+            var sand_id = $('#select-sand option:selected').val();
+
+            window.location.href = '/Report/ExportExcelBoatsData?dateFrom=' + date_from + '&dateTo=' + date_to + '&sandId=' + sand_id;
+
+            return false;
+        }
+
+    </script>
+}
+

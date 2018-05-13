@@ -1,0 +1,208 @@
+﻿@{
+    ViewBag.Title = "Báo cáo tài chính";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="box box-info">
+        <div class="box-header with-border text-red">
+            <i class="fa fa-list-alt"></i>
+            <h4 class="box-title text-bold">Báo cáo tài chính</h4>
+        </div><!-- /.box-header -->
+        <div class="box-body form-inline">
+            <div class="form-group">
+                Từ ngày: 
+                <input id="date-from" type="text" class="form-control date-from date-picker" readonly="readonly" style="width:100px;" /> -
+                <input id="date-to" type="text" class="form-control date-to date-picker" readonly="readonly" style="width:100px;" />
+                <button id="btn-export" class="btn btn-success btn-sm" type="button" onclick="exportExcel()" style="width:120px;"><i class="fa fa-save"></i> &nbsp; Xuất excel</button>
+            </div>
+        </div>
+        <div class="box-body box-finance" style="margin-top:-20px;"></div><!-- /.box-products -->
+        <div class="box-body box-finance-footer"></div><!-- /.box-paging -->
+        <div style="height:24px;"></div>
+    </div>
+</section>
+<!-- /. Main content -->
+@section Styles {
+    @Styles.Render("~/Content/bootstrap-dialog")
+    <link href="~/Scripts/plugins/datepicker/datepicker3.css" rel="stylesheet" />
+}
+
+@section Scripts {
+    @Scripts.Render("~/Bundles/bootstrap-dialog")
+    <script src="~/Scripts/plugins/datepicker/bootstrap-datepicker.js"></script>
+    <script>
+
+        // Load page complete
+        $(document).ready(function () {
+
+            // date picker setup
+            $('.date-picker').datepicker({
+                format: 'dd/mm/yyyy',
+                todayBtn: true,
+                todayHighlight: true,
+                autoclose: true
+            });
+
+            // assign default date range
+            var today = new Date();
+            var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            $('.date-from').datepicker('setDates', firstDay);
+            $('.date-to').datepicker('setDates', today);
+
+            ajaxLoadFinanceReport();
+
+            // show report when date range changed
+            $('.date-from').on("change", function () {
+                ajaxLoadFinanceReport();
+            });
+
+            $('.date-to').on("change", function () {
+                ajaxLoadFinanceReport();
+            });
+        })
+
+        function ajaxLoadFinanceReport() {
+            var date_from = $('.date-from').val();
+            var date_to = $('.date-to').val();
+
+            showLoadingStatus();
+
+            $.ajax({
+                url: '/Report/GetFinanceData/?dateFrom=' + date_from + '&dateTo=' + date_to,
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                success: function (data) {
+                    if (data.Error == 0) {
+                        showFinanceReport(data.FinanceData);
+                    }
+                    else {
+                        $(".box-finance-footer").html("<span class='text-danger'>Lỗi " + data.Message + "</span>");
+                    }
+                },
+                error: function (xhr) {
+                    $(".box-finance-footer").html("<span class='text-danger'>Lỗi " + xhr.responseText + "</span>");
+                }
+            });
+
+            return false;
+        }
+
+        function showLoadingStatus() {
+            var container = $(".box-finance");
+            var html_loading = '';
+            html_loading += '            <i class="fa fa-refresh fa-spin text-green"></i>\r\n';
+            html_loading += '            <span class="text-green" style="margin-left:4px;">Đang nạp báo cáo tài chính...</span>\r\n';
+            $(container).html(html_loading);
+        }
+
+        function showFinanceReport(data) {
+            var container = $(".box-finance");
+            var html = '';
+
+            var total_revenue_amount = 0;
+            var total_expenses_amount = 0;
+
+            // generate report table
+            html += '    <table id="tb-orders" class="table table-bordered table-nonfluid" style="min-width:500px;">\r\n';
+            html += '        <tbody>\r\n';
+            html += '            <tr class="bg-yellow">\r\n';
+            html += '                <th class="text-nowrap">Hạng mục</th>\r\n';
+            html += '                <th class="text-nowrap">Số tiền</th>\r\n';
+            html += '            </tr>\r\n';
+
+            // gold sand revenue
+            html += '            <tr>\r\n';
+            html += '                <td class="text-nowrap">Tổng thu cát vàng</td>\r\n';
+            html += '                <td class="text-nowrap text-right">' + data.RevenueGoldSand.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '            </tr>\r\n';
+
+            total_revenue_amount += data.RevenueGoldSand;
+
+            // filling sand revenue
+            html += '            <tr>\r\n';
+            html += '                <td class="text-nowrap">Tổng thu cát lấp</td>\r\n';
+            html += '                <td class="text-nowrap text-right">' + data.RevenueFillingSand.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '            </tr>\r\n';
+
+            total_revenue_amount += data.RevenueFillingSand;
+
+            // sand revenue summary
+            html += '            <tr class="text-bold text-blue bg-warning">\r\n';
+            html += '                <td class="text-nowrap">Tổng thu:</td>\r\n';
+            html += '                <td class="text-nowrap text-right">' + total_revenue_amount.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '            </tr>\r\n';
+
+            // transport amount
+            html += '            <tr>\r\n';
+            html += '                <td class="text-nowrap">Trả tiền ghe</td>\r\n';
+            html += '                <td class="text-nowrap text-right">' + data.TransportAmount.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '            </tr>\r\n';
+
+            // purchase amount
+            html += '            <tr>\r\n';
+            html += '                <td class="text-nowrap">Trả tiền mỏ</td>\r\n';
+            html += '                <td class="text-nowrap text-right">' + data.PurchaseAmount.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '            </tr>\r\n';
+
+            $.each(data.Expenses, function (index, element) {
+                //html += '            <tr>\r\n';
+                //html += '                <td class="text-nowrap">' + element.Name +'</td>\r\n';
+                //html += '                <td class="text-nowrap text-right">' + element.Amount.format(0, 3, ',', '.') + '</td>\r\n';
+                //html += '            </tr>\r\n';
+
+                total_expenses_amount += element.Amount;
+            });
+            html += '            <tr>\r\n';
+            html += '                <td class="text-nowrap">Khoản chi khác</td>\r\n';
+            html += '                <td class="text-nowrap text-right">' + total_expenses_amount.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '            </tr>\r\n';
+
+            total_expenses_amount += data.TransportAmount;
+            total_expenses_amount += data.PurchaseAmount;
+
+            // expenses summary
+            html += '            <tr class="text-bold text-red bg-warning">\r\n';
+            html += '                <td class="text-nowrap">Tổng chi:</td>\r\n';
+            html += '                <td class="text-nowrap text-right">' + total_expenses_amount.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '            </tr>\r\n';
+
+            // profit summary
+            var profit = total_revenue_amount - total_expenses_amount;
+            html += '            <tr class="text-bold bg-green">\r\n';
+            html += '                <td class="text-nowrap">Lợi nhuận:</td>\r\n';
+            html += '                <td class="text-nowrap text-right">' + profit.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '            </tr>\r\n';
+            html += '       </tbody>\r\n';
+            html += '    </table>\r\n';
+
+            $(container).html(html);
+        }
+
+        // Export excel
+        function exportExcel() {
+            var date_from = $('.date-from').val();
+            var date_to = $('.date-to').val();
+
+            window.location.href = '/Report/ExportExcelFinanceData?dateFrom=' + date_from + '&dateTo=' + date_to;
+
+            return false;
+        }
+
+
+    </script>
+}
+

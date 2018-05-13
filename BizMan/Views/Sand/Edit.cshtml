@@ -1,0 +1,108 @@
+﻿@model BizMan.Models.EditSandViewModel
+
+@{
+    ViewBag.Title = "Cập nhật sản phẩm";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+<!-- Main content -->
+<section class="content">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="box box-info">
+                <div class="box-header with-border text-red">
+                    <i class="fa fa-plus-square"></i>
+                    <h4 class="box-title text-bold">Cập nhật sản phẩm cát</h4>
+                    <div class="box-tools pull-right">
+                        <button class="btn btn-box-tool" data-widget="collapse" data-toggle="tooltip" title="" data-original-title="Collapse"><i class="fa fa-caret-up"></i></button>
+                    </div>
+                </div>
+                @using (Html.BeginForm())
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.ValidationSummary(true)
+                    @Html.HiddenFor(model => model.SandId)
+
+                    <div class="box-body form-horizontal">
+                        <div class="form-group row">
+                            <div class="control-label col-sm-3">
+                                Tên sản phẩm:
+                            </div>
+                            <div class="editor-field col-sm-9">
+                                @Html.TextBoxFor(model => model.SandName, new { @class = "form-control", @placeholder = "Tên sản phẩm" })
+                                @Html.ValidationMessageFor(model => model.SandName)
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="control-label col-sm-3">
+                                Mô tả sản phẩm:
+                            </div>
+                            <div class="editor-field col-sm-9">
+                                @Html.TextAreaFor(model => model.Description, new { @class = "form-control", @placeholder = "Mô tả sản phẩm", @rows = "4" })
+                                @Html.ValidationMessageFor(model => model.Description)
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="control-label col-sm-3">
+                                Giá mỏ:
+                            </div>
+                            <div class="editor-field col-sm-9">
+                                @Html.TextBoxFor(model => model.ProviderPrice, new { @class = "form-control number-input" })
+                                @Html.ValidationMessageFor(model => model.ProviderPrice)
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="control-label col-sm-3">
+                                Giá khách:
+                            </div>
+                            <div class="editor-field col-sm-9">
+                                @Html.TextBoxFor(model => model.CustomerPrice, new { @class = "form-control number-input" })
+                                @Html.ValidationMessageFor(model => model.CustomerPrice)
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="control-label col-sm-3">
+                                Giá gia công:
+                            </div>
+                            <div class="editor-field col-sm-9">
+                                @Html.TextBoxFor(model => model.TransportPrice, new { @class = "form-control number-input" })
+                                @Html.ValidationMessageFor(model => model.TransportPrice)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="editor-field col-sm-9 col-sm-offset-3">
+                            <button class="btn btn-primary" type="submit" style="width:120px;">Cập nhật <i class="fa fa-arrow-circle-right"></i></button>
+                            <button class="btn btn-warning" type="reset" style="margin-left:4px; width:120px;">Nhập lại <i class="fa fa-refresh"></i></button>
+                        </div>
+                    </div>
+                }
+                <div class="clearfix" />
+            </div>
+        </div>
+    </div>
+
+</section><!-- /.content -->
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+    <script src="~/Scripts/jquery.number.min.js"></script>
+    <script>
+
+        // The page DOM is ready
+        $(document).ready(function () {
+
+            // Setup number input
+            $(".number-input").number(true, 0);
+        })
+
+    </script>
+}

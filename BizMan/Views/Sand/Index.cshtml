@@ -1,0 +1,262 @@
+﻿@{
+    ViewBag.Title = "Danh mục sản phẩm";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="box box-info">
+        <div class="box-header with-border text-red">
+            <i class="fa fa-list-alt"></i>
+            <h4 class="box-title text-bold">Danh sách sản phẩm</h4>
+        </div><!-- /.box-header -->
+        <div class="box-body box-sands"></div><!-- /.box-products -->
+        <div class="box-body box-sands-footer"></div><!-- /.box-paging -->
+    </div>
+</section>
+<!-- /. Main content -->
+@section Styles {
+    @Styles.Render("~/Content/bootstrap-dialog")
+}
+
+@section Scripts {
+    @Scripts.Render("~/Bundles/bootstrap-dialog")
+
+    <script>
+
+        // Global vars
+        var g_page_index = 1;
+        var g_page_total = 1;
+
+
+        // Load page complete
+        $(document).ready(function () {
+
+            showLoadingStatus();
+
+            ajaxLoadSands(g_page_index);
+        })
+
+
+        // Ajax to load & display product list
+        function ajaxLoadSands(pageIndex) {
+            $.ajax({
+                url: '/Sand/GetSands/?pageIndex=' + pageIndex,
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                success: function (data) {
+                    if (data.Error == 0) {
+                        // update global page index value
+                        g_page_index = data.PageIndex;
+                        g_page_total = data.PageTotal;
+
+                        // show products list
+                        showSandsList(
+                            data.Sands,
+                            data.SandsCount,
+                            data.PageIndex,
+                            data.PageSize,
+                            data.PageTotal);
+                    }
+                    else {
+                        $(".box-sands").html("<span class='text-danger'>Lỗi " + data.Message + "</span>");
+                    }
+                },
+                error: function (xhr) {
+                    $(".box-sands").html("<span class='text-danger'>Lỗi " + xhr.responseText + "</span>");
+                }
+            });
+
+            return false;
+        }
+
+
+        // Navigate to next produtcs page
+        function goToNextPage() {
+            if (g_page_index < g_page_total) {
+                g_page_index++;
+                ajaxLoadSands(g_page_index);
+            }
+            return false;
+        }
+
+
+        // Navigate to previous produtcs page
+        function goToPrevPage() {
+            if (g_page_index > 1) {
+                g_page_index--;
+                ajaxLoadSands(g_page_index);
+            }
+            return false;
+        }
+
+
+        // Function to show ajax loading status
+        function showLoadingStatus() {
+            var container = $(".box-sands");
+            var html = '';
+            html += '            <i class="fa fa-refresh fa-spin text-green"></i>\r\n';
+            html += '            <span class="text-green" style="margin-left:4px;">Đang nạp danh sách sản phẩm cát...</span>\r\n';
+            $(container).html(html);
+        }
+
+
+
+        // Function to sho product list
+        function showSandsList(products, productsCount, pageIndex, pageSize, pageTotal) {
+            var container = $(".box-sands");
+            var container_footer = $(".box-sands-footer");
+            var html = '';
+            var html_footer = '';
+            var startNum = (pageIndex - 1) * pageSize;
+            
+            // Generate products table html
+            html += '    <table class="table table-bordered table-nonfluid" style="min-width:500px;">\r\n';
+            html += '        <tbody>\r\n';
+            html += '            <tr class="bg-yellow">\r\n';
+            html += '               <th class="text-nowrap text-center">#</th>\r\n';
+            html += '                <th class="text-nowrap">Tên sản phẩm</th>\r\n';
+            html += '                <th class="text-nowrap">Mô tả</th>\r\n';
+            html += '                <th class="text-nowrap">Giá trả mỏ</th>\r\n';
+            html += '                <th class="text-nowrap">Giá trả khách</th>\r\n';
+            html += '                <th class="text-nowrap">Giá gia công</th>\r\n';
+            html += '                <th class="text-nowrap">Thao tác</th>\r\n';
+            html += '            </tr>\r\n';
+            $.each(products, function (index, element) {
+                startNum++;
+                html += '            <tr class="sand-row-item">\r\n';
+                html += '                <td class=" text-center">' + startNum + '</td>\r\n';
+                html += '                <td>' + element.SandName + '</td>\r\n';
+                html += '                <td>' + element.Description + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.ProviderPrice.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.CustomerPrice.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.TransportPrice.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td>\r\n';
+                html += '                    <a href="/Sand/Edit/' + element.SandId + '" class="btn btn-xs btn-success">Sửa</a>\r\n';
+                html += '                    <a href="#" class="btn btn-xs btn-danger" onclick="return ajaxDeleteSand(' + element.SandId + ', \'' + element.SandName + '\', this)">Xóa</a>\r\n';
+                html += '                </td>\r\n';
+                html += '            </tr>\r\n';
+            })
+            // generate paging row
+            if (pageTotal > 1) {
+                html += '            <tr class="barges-row-item">\r\n';
+                html += '                <td colspan="13">\r\n';
+                html += '                    <ul class="pagination pagination-sm no-margin inline pull-right">\r\n';
+                html += '                        <li><a href="#" onclick="return goToPrevPage()">«</a></li>\r\n';
+                for (var i = 1; i <= pageTotal; i++) {
+                    if (i == g_page_index) {
+                        html += '                       <li><a href="#" onclick="return false;" class="text-blue">' + i + '</a></li>\r\n';
+                    } else {
+                        html += '                       <li><a href="#" onclick="return ajaxLoadSands(' + i + ')">' + i + '</a></li>\r\n';
+                    }
+                }
+                html += '                        <li><a href="#" onclick="return goToNextPage()">»</a></li>\r\n';
+                html += '                    </ul>\r\n';
+                html += '                </td>\r\n';
+                html += '            </tr>\r\n';
+                html += '       </tbody>\r\n';
+                html += '    </table>\r\n';
+            }
+
+            // Show products list table
+            $(container).html(html);
+
+            // Generate products table footer html
+            if (productsCount > 0) {
+                html_footer += '        Tổng cộng: <span class="text-red">' + productsCount + '</span>';
+            }
+            else {
+                html_footer += '        <span class="text-danger">Không có thông tin sản phẩm nào!</span>';
+            }
+
+            // Show products list footer
+            $(container_footer).html(html_footer);
+        }
+
+
+        // Ajax to delete a product info
+        function ajaxDeleteSand(id, name, element) {
+            // show confirmed dialog
+            BootstrapDialog.show({
+                message: 'Bạn có muốn xóa sản phẩm [' + name + '] không?',
+                buttons: [{
+                    label: 'Xóa sản phẩm',
+                    cssClass: 'btn-danger btn-sm',
+                    action: function (dialog) {
+                        $.ajax({
+                            url: '/Sand/Delete/' + id,
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+                            success: function (data) {
+                                if (data.Error == 0) {
+                                    BootstrapDialog.show({
+                                        title: "Xóa sản phẩm",
+                                        message: data.Message,
+                                        buttons: [{
+                                            label: "Đóng",
+                                            cssClass: "btn-primary btn-sm",
+                                            action: function (dialog) {
+                                                dialog.close();
+                                            }
+                                        }]
+                                    });
+                                    // reload products
+                                    ajaxLoadSands(g_page_index);
+                                }
+                                else {
+                                    BootstrapDialog.show({
+                                        title: "Lỗi xóa sản phẩm",
+                                        message: data.Message,
+                                        buttons: [{
+                                            label: "Đóng",
+                                            cssClass: "btn-primary btn-sm",
+                                            action: function (dialog) {
+                                                dialog.close();
+                                            }
+                                        }]
+                                    });
+                                }
+                            },
+                            error: function (xhr) {
+                                BootstrapDialog.show({
+                                    title: "Lỗi xóa sản phẩm",
+                                    message: xhr.responseText,
+                                    buttons: [{
+                                        label: "Đóng",
+                                        cssClass: "btn-primary btn-sm",
+                                        action: function (dialog) {
+                                            dialog.close();
+                                        }
+                                    }]
+                                });
+                            }
+                        });
+                        dialog.close();
+                    }
+                }, {
+                    label: 'Không xóa',
+                    cssClass: 'btn-primary btn-sm',
+                    action: function (dialog) {
+                        dialog.close();
+                    }
+                }]
+            });
+            return false;
+        }
+
+    </script>
+}
+

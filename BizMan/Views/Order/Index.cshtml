@@ -1,0 +1,541 @@
+﻿@{
+    ViewBag.Title = "Tra cứu chuyến";
+    Layout = "~/Views/Shared/Admin.cshtml";
+
+    var classHiddenAdminColumn = (User != null && User.Roles.Contains("Administrators")) ? "" : "hide-column";
+
+}
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="box box-info">
+        <div class="box-header with-border text-red">
+            <i class="fa fa-list-alt"></i>
+            <h4 class="box-title text-bold">Danh sách chuyến</h4>
+        </div><!-- /.box-header -->
+        <div class="box-body">
+            <div class="form-group form-inline">
+                <input id="date-from" type="text" class="form-control date-picker" readonly="readonly" style="width:100px;" /> -
+                <input id="date-to" type="text" class="form-control date-picker" readonly="readonly" style="width:100px;" />
+                <select id="customer-select" class="form-control" style="min-width:120px;"></select>
+                <select id="sand-select" class="form-control" style="min-width:120px;"></select>
+            </div>
+            <div class="form-group form-inline">
+                <input id="filter-text" name="filter-text" placeholder="Từ khóa tra cứu" class="form-control" type="text" style="width:210px;" />
+                <button id="btn-search" class="btn btn-primary btn-sm" type="button" onclick="ajaxLoadOrders()" style="width:120px;"><i class="fa fa-search"></i> &nbsp; Tra cứu </button>
+                <button id="btn-export" class="btn btn-success btn-sm @classHiddenAdminColumn" type="button" onclick="exportExcel()" style="width:120px;"><i class="fa fa-save"></i> &nbsp; Xuất excel</button>
+            </div>
+        </div>
+        <div class="box-body box-orders" style="margin-top:-20px;"></div><!-- /.box-orders -->
+        <div class="box-body box-orders-footer"></div><!-- /.box-paging -->
+    </div>
+</section>
+<!-- /. Main content -->
+@section Styles {
+    @Styles.Render("~/Content/bootstrap-dialog")
+    <link href="~/Scripts/plugins/datepicker/datepicker3.css" rel="stylesheet" />
+    <style>
+        .hide-column {
+            display: none !important;
+        }
+    </style>
+}
+
+@section Scripts {
+    @Scripts.Render("~/Bundles/bootstrap-dialog")
+    <script src="~/Scripts/plugins/datepicker/bootstrap-datepicker.js"></script>
+    <script src="~/Scripts/jquery.table2excel.min.js"></script>
+    <script>
+
+        // Global vars
+        var g_customers;
+        var g_sands;
+
+        var GOLD_SAND_TYPE = 1;
+        var FILLING_SAND_TYPE = 2;
+
+        // Load page complete
+        $(document).ready(function () {
+
+            // plugins setup
+            $('.date-picker').datepicker({
+                format: 'dd/mm/yyyy',
+                todayBtn: true,
+                todayHighlight: true,
+                autoclose: true
+            });
+
+            // assign default values
+            var today = new Date();
+            var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            $('#date-from').datepicker('setDates', firstDay);
+            $('#date-to').datepicker('setDates', today);
+
+            // data loading
+            ajaxLoadSands()
+            ajaxLoadCustomers();
+            ajaxLoadOrders();
+
+            // handle events
+            $('.date-picker').on('change', function (e) {
+                ajaxLoadOrders();
+            })
+
+            $('#sand-select').on('change', function (e) {
+                ajaxLoadOrders();
+            })
+
+            $('#customer-select').on('change', function (e) {
+                ajaxLoadOrders();
+            })
+        })
+
+        // Ajax function to load sands
+        function ajaxLoadSands() {
+            $.ajax({
+                url: '/Sand/GetAllSands',
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                async: false,
+                success: function (data) {
+                    if (data.Error == 0) {
+                        g_sands = data.Sands;
+                        // generate sand select options
+                        var sand_select = document.getElementById('sand-select');
+                        $.each(g_sands, function (index, element) {
+                            sand_select.options[sand_select.options.length] = new Option(element.SandName, element.SandId, false, false);
+                        })
+                    }
+                    else {
+                        console.debug("DBG", data.Message)
+                    }
+                },
+                error: function (xhr) {
+                    console.debug("DBG", xhr.responseText)
+                }
+            });
+            return false;
+        }
+
+        // Function to get specified Sand bject from collection
+        function getSand(sand_id) {
+            var sand = undefined;
+            if (g_sands != undefined) {
+                $.each(g_sands, function (index, element) {
+                    if (element.SandId == sand_id)
+                        return sand = element;
+                })
+            }
+            return sand;
+        }
+
+        // Ajax to load customers
+        function ajaxLoadCustomers() {
+            $.ajax({
+                url: '/Customer/GetAllCustomers',
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                async: false,
+                success: function (data) {
+                    if (data.Error == 0) {
+                        g_customers = data.Customers;
+                        // show customer select options
+                        var customer_select = document.getElementById('customer-select');
+                        customer_select.options[0] = new Option('--Đơn vị--', 0, false, false);
+                        $.each(g_customers, function (index, element) {
+                            customer_select.options[customer_select.options.length] = new Option(element.CustomerName, element.CustomerId, false, false);
+                        })
+                    }
+                    else {
+                        $('.box-orders').html("<span class='text-danger'>Lỗi " + data.Message + "</span>");
+                    }
+                },
+                error: function (xhr) {
+                    $('.box-orders').html("<span class='text-danger'>Lỗi " + xhr.responseText + "</span>");
+                }
+            });
+
+            return false;
+        }
+
+        // Ajax to search orders
+        function ajaxLoadOrders() {
+            var date_from = $('#date-from').val();
+            var date_to = $('#date-to').val();
+            var sand_id = $('#sand-select option:selected').val();
+            var customer_id = $('#customer-select option:selected').val();
+            var filter_text = $('#filter-text').val();
+
+            var params =
+                    '?dateFrom=' + date_from +
+                    '&dateTo=' + date_to +
+                    '&sandId=' + sand_id +
+                    '&customerId=' + customer_id +
+                    '&filterText=' + filter_text;
+
+            showOrdersLoadingStatus();
+
+            $.ajax({
+                url: '/Order/GetOrders/' + params,
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                success: function (data) {
+                    if (data.Error == 0) {
+                        var orders = data.Orders;
+                        var sand = getSand(sand_id);
+                        var sand_type = getSandType(sand);
+
+                        switch (sand_type) {
+
+                            case FILLING_SAND_TYPE:
+                                showFillSandOrders(orders);
+                                break;
+
+                            case GOLD_SAND_TYPE:
+                                showGoldSandOrders(orders);
+                                break;
+                        }
+                    }
+                    else {
+                        $('.box-orders').html("<span class='text-danger'>Lỗi " + data.Message + "</span>");
+                    }
+                },
+                error: function (xhr) {
+                    $('.box-orders').html("<span class='text-danger'>Kết nối mạng thất bại!</span>");
+                }
+            });
+
+            return false;
+        }
+
+        // Export excel
+        function exportExcel() {
+            var date_from = $('#date-from').val();
+            var date_to = $('#date-to').val();
+            var sand_id = $('#sand-select option:selected').val();
+            var customer_id = $('#customer-select option:selected').val();
+            var filter_text = $('#filter-text').val();
+
+            window.location.href = '/Order/ExportExcel?dateFrom=' + date_from + '&dateTo=' + date_to + '&sandId=' + sand_id + '&customerId=' + customer_id + '&filterText=' + filter_text;
+
+            return false;
+        }
+
+        function showOrdersLoadingStatus() {
+            var container = $('.box-orders');
+            var container_footer = $('.box-orders-footer');
+            var html = '';
+            html += '            <i class="fa fa-refresh fa-spin text-green"></i>\r\n';
+            html += '            <span class="text-green" style="margin-left:4px;">Đang nạp danh sách chuyến...</span>\r\n';
+            $(container).html(html);
+            $(container_footer).html('');
+        }
+
+        function showFillSandOrders(orders) {
+            var container = $('.box-orders');
+            var container_footer = $('.box-orders-footer');
+            var html = '';
+
+            // open table
+            html += '    <table id="tb-orders" class="table table-bordered table-nonfluid" style="min-width:500px;">\r\n';
+            html += '        <tbody>\r\n';
+
+            // generate headers
+            html += '            <tr class="bg-yellow">\r\n';
+            html += '                <th class="text-nowrap text-center">Ngày</th>\r\n';
+            html += '                <th class="text-nowrap">Đơn vị</th>\r\n';
+            html += '                <th class="text-nowrap">Sà lan</th>\r\n';
+            html += '                <th class="text-nowrap">Khối DS</th>\r\n';
+            html += '                <th class="text-nowrap @classHiddenAdminColumn" >Khối mỏ</th>\r\n';
+            html += '                <th class="text-nowrap @classHiddenAdminColumn">Khối &darr;</th>\r\n';
+            html += '                <th class="text-nowrap">Khối ghe</th>\r\n';
+            html += '                <th class="text-nowrap">Giá bán</th>\r\n';
+            html += '                <th class="text-nowrap @classHiddenAdminColumn">Giá mua</th>\r\n';
+            html += '                <th class="text-nowrap bg-blue">Doanh số</th>\r\n';
+            html += '                <th class="text-nowrap bg-red @classHiddenAdminColumn">Trả mỏ</th>\r\n';
+            html += '                <th class="text-nowrap bg-red">Trả ghe</th>\r\n';
+            html += '                <th class="text-nowrap bg-green @classHiddenAdminColumn">Lợi nhuận</th>\r\n';
+            html += '                <th class="text-nowrap">Thao tác</th>\r\n';
+            html += '            </tr>\r\n';
+
+            // generate rows
+            var row_count = 0;
+            var sum_volume_revenue = 0;
+            var sum_volume_purchase = 0;
+            var sum_volume_purchase_decrease = 0;
+            var sum_volume_transport = 0;
+            var sum_amount_revenue = 0;
+            var sum_amount_purchase = 0;
+            var sum_amount_transport = 0;
+            var sum_amount_profit = 0;
+
+            $.each(orders, function (index, element) {
+                var order_date = new Date(element.OrderDate.match(/\d+/)[0] * 1);
+                var profit = element.AmountRevenue - element.AmountPurchase - element.AmountTransport;
+                html += '            <tr class="orders-row-item">\r\n';
+                html += '                <td class="text-nowrap text-center">' + formatDateVN(order_date) + '</td>\r\n';
+                html += '                <td class="text-nowrap">' + element.CustomerName + '</td>\r\n';
+                html += '                <td class="text-nowrap">' + element.BargeCode + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.VolumeRevenue.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right @classHiddenAdminColumn">' + element.VolumePurchase.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right @classHiddenAdminColumn">' + element.VolumePurchaseDecrease.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.VolumeTransport.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.CustomerPrice.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right @classHiddenAdminColumn">' + element.ProviderPrice.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right text-blue">' + element.AmountRevenue.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right text-red @classHiddenAdminColumn">' + element.AmountPurchase.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right text-red">' + element.AmountTransport.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right text-green @classHiddenAdminColumn">' + profit.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class="text-nowrap">\r\n';
+                html += '                    <a href="/Order/Edit/' + element.OrderId + '" class="btn btn-xs btn-primary"> Sửa</a>\r\n';
+                html += '                    <a href="#" class="btn btn-xs btn-danger" onclick="return ajaxDeleteOrder(' + element.OrderId + ',' + element.SandId + ', \'' + element.CustomerName + ' - ' + formatDateVN(order_date) + '\', this)"> Xóa</a>\r\n';
+                html += '                </td>\r\n';
+                html += '            </tr>\r\n';
+
+                row_count++;
+                sum_volume_revenue += element.VolumeRevenue;
+                sum_volume_purchase += element.VolumePurchase;
+                sum_volume_purchase_decrease += element.VolumePurchaseDecrease;
+                sum_volume_transport += element.VolumeTransport;
+                sum_amount_revenue += element.AmountRevenue;
+                sum_amount_purchase += element.AmountPurchase;
+                sum_amount_transport += element.AmountTransport;
+                sum_amount_profit += profit;
+            })
+
+            // generate summary row
+            html += '            <tr class="bg-info">\r\n';
+            html += '                <td class="text-bold">Tổng cộng:</td>\r\n';
+            html += '                <td></td>\r\n';
+            html += '                <td></td>\r\n';
+            html += '                <td class="text-bold text-right">' + sum_volume_revenue.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-bold text-right @classHiddenAdminColumn">' + sum_volume_purchase.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-bold text-right @classHiddenAdminColumn">' + sum_volume_purchase_decrease.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-bold text-right">' + sum_volume_transport.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td></td>\r\n';
+            html += '                <td class="@classHiddenAdminColumn"></td>\r\n';
+            html += '                <td class="text-right bg-blue">' + sum_amount_revenue.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-right bg-red @classHiddenAdminColumn">' + sum_amount_purchase.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-right bg-red">' + sum_amount_transport.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-right bg-green @classHiddenAdminColumn">' + sum_amount_profit.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td></td>\r\n';
+            html += '            </tr>\r\n';
+
+            // close table
+            html += '       </tbody>\r\n';
+            html += '    </table>\r\n';
+
+            $(container).html(html);
+
+            // show footer
+            $(container_footer).html('Tổng cộng: <span class="text-red">' + row_count + '</span>');
+        }
+
+        function showGoldSandOrders(orders) {
+            var container = $('.box-orders');
+            var container_footer = $('.box-orders-footer');
+            var html = '';
+
+            // open table
+            html += '    <table id="tb-orders" class="table table-bordered table-nonfluid" style="min-width:500px;">\r\n';
+            html += '        <tbody>\r\n';
+
+            // generate headers
+            html += '            <tr class="bg-yellow">\r\n';
+            html += '                <th class="text-center">Ngày</th>\r\n';
+            html += '                <th>Đơn vị</th>\r\n';
+            html += '                <th>Sà lan</th>\r\n';
+            html += '                <th class="@classHiddenAdminColumn" >Khối mỏ</th>\r\n';
+            html += '                <th class="@classHiddenAdminColumn">Khối &darr;</th>\r\n';
+            html += '                <th>Khối ghe</th>\r\n';
+            html += '                <th>Gia công</th>\r\n';
+            html += '                <th>Giá bán</th>\r\n';
+            html += '                <th class="@classHiddenAdminColumn">Giá mua</th>\r\n';
+            html += '                <th>Giá Gia công</th>\r\n';
+            html += '                <th class="bg-blue">Doanh số</th>\r\n';
+            html += '                <th class="bg-red @classHiddenAdminColumn">Trả mỏ</th>\r\n';
+            html += '                <th class="bg-red">Trả ghe</th>\r\n';
+            html += '                <th class="bg-green @classHiddenAdminColumn">Lợi nhuận</th>\r\n';
+            html += '                <th>Thao tác</th>\r\n';
+            html += '            </tr>\r\n';
+
+            // generate rows
+            var row_count = 0;
+            var sum_volume_promotion = 0;
+            var sum_volume_purchase = 0;
+            var sum_volume_purchase_decrease = 0;
+            var sum_volume_transport = 0;
+            var sum_amount_revenue = 0;
+            var sum_amount_purchase = 0;
+            var sum_amount_transport = 0;
+            var sum_amount_profit = 0;
+
+            $.each(orders, function (index, element) {
+                var order_date = new Date(element.OrderDate.match(/\d+/)[0] * 1);
+                var profit = element.AmountRevenue - element.AmountPurchase - element.AmountTransport;
+
+                html += '            <tr class="orders-row-item">\r\n';
+                html += '                <td class="text-nowrap text-center">' + formatDateVN(order_date) + '</td>\r\n';
+                html += '                <td class="text-nowrap">' + element.CustomerName + '</td>\r\n';
+                html += '                <td class="text-nowrap">' + element.BargeCode + '</td>\r\n';
+                html += '                <td class=" text-right @classHiddenAdminColumn">' + element.VolumePurchase.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right @classHiddenAdminColumn">' + element.VolumePurchaseDecrease.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.VolumeTransport.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.VolumePromotion.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.CustomerPrice.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right @classHiddenAdminColumn">' + element.ProviderPrice.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right">' + element.BaseTransportPrice.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right text-blue">' + element.AmountRevenue.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right text-red @classHiddenAdminColumn">' + element.AmountPurchase.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right text-red">' + element.AmountTransport.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class=" text-right text-green @classHiddenAdminColumn">' + profit.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class="text-nowrap">\r\n';
+                html += '                    <a href="/Order/Edit/' + element.OrderId + '" class="btn btn-xs btn-primary"> Sửa</a>\r\n';
+                html += '                    <a href="#" class="btn btn-xs btn-danger" onclick="return ajaxDeleteOrder(' + element.OrderId + ',' + element.SandId + ', \'' + element.CustomerName + ' - ' + formatDateVN(order_date) + '\', this)"> Xóa</a>\r\n';
+                html += '                </td>\r\n';
+                html += '            </tr>\r\n';
+
+                row_count++;
+                sum_volume_promotion += element.VolumePromotion;
+                sum_volume_purchase += element.VolumePurchase;
+                sum_volume_purchase_decrease += element.VolumePurchaseDecrease;
+                sum_volume_transport += element.VolumeTransport;
+                sum_amount_revenue += element.AmountRevenue;
+                sum_amount_purchase += element.AmountPurchase;
+                sum_amount_transport += element.AmountTransport;
+                sum_amount_profit += profit;
+            })
+
+            // generate summary row
+            var sum_profit = sum_amount_revenue - sum_amount_purchase - sum_amount_transport;
+            html += '            <tr class="bg-info">\r\n';
+            html += '                <td class="text-bold">Tổng cộng:</td>\r\n';
+            html += '                <td></td>\r\n';
+            html += '                <td></td>\r\n';
+            html += '                <td class="text-bold text-right @classHiddenAdminColumn">' + sum_volume_purchase.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-bold text-right @classHiddenAdminColumn">' + sum_volume_purchase_decrease.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-bold text-right">' + sum_volume_transport.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-bold text-right">' + sum_volume_promotion.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td></td>\r\n';
+            html += '                <td class="@classHiddenAdminColumn"></td>\r\n';
+            html += '                <td></td>\r\n';
+            html += '                <td class="text-right bg-blue">' + sum_amount_revenue.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-right bg-red @classHiddenAdminColumn">' + sum_amount_purchase.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-right bg-red">' + sum_amount_transport.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-right bg-green @classHiddenAdminColumn">' + sum_amount_profit.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td></td>\r\n';
+            html += '            </tr>\r\n';
+
+            // close table
+            html += '       </tbody>\r\n';
+            html += '    </table>\r\n';
+
+            $(container).html(html);
+
+            // show footer
+            $(container_footer).html('Tổng cộng: <span class="text-red">' + row_count + '</span>');
+        }
+
+
+        // Ajax delete barge
+        function ajaxDeleteOrder(orderId, sandId, customerName, element) {
+            // show confirmed dialog
+            BootstrapDialog.show({
+                message: 'Bạn có muốn xóa đơn hàng [' + customerName + '] không?',
+                buttons: [{
+                    label: 'Xóa đơn hàng',
+                    cssClass: 'btn-danger btn-sm',
+                    action: function (dialog) {
+                        $.ajax({
+                            url: '/Order/Delete/?orderId=' + orderId + '&sandId=' + sandId,
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+                            success: function (data) {
+                                if (data.Error == 0) {
+                                    BootstrapDialog.show({
+                                        title: "Xóa thông tin đơn hàng",
+                                        message: data.Message,
+                                        buttons: [{
+                                            label: "Đóng",
+                                            cssClass: "btn-primary btn-sm",
+                                            action: function (dialog) {
+                                                dialog.close();
+                                            }
+                                        }]
+                                    });
+                                    // reload orders
+                                    ajaxLoadOrders();
+                                }
+                                else {
+                                    BootstrapDialog.show({
+                                        title: "Lỗi xóa thông tin đơn hàng",
+                                        message: data.Message,
+                                        buttons: [{
+                                            label: "Đóng",
+                                            cssClass: "btn-primary btn-sm",
+                                            action: function (dialog) {
+                                                dialog.close();
+                                            }
+                                        }]
+                                    });
+                                }
+                            },
+                            error: function (xhr) {
+                                BootstrapDialog.show({
+                                    title: "Lỗi xóa thông tin đơn hàng",
+                                    message: xhr.responseText,
+                                    buttons: [{
+                                        label: "Đóng",
+                                        cssClass: "btn-primary btn-sm",
+                                        action: function (dialog) {
+                                            dialog.close();
+                                        }
+                                    }]
+                                });
+                            }
+                        });
+                        dialog.close();
+                    }
+                }, {
+                    label: 'Không xóa',
+                    cssClass: 'btn-primary btn-sm',
+                    action: function (dialog) {
+                        dialog.close();
+                    }
+                }]
+            });
+            return false;
+        }
+
+        // function to get sand type
+        function getSandType(sand) {
+            if (sand != undefined) {
+                var sand_name = sand.SandName.toLowerCase();
+                if (sand_name.indexOf('vàng') > -1 || sand_name.indexOf('vang') > -1 ||
+                    sand_name.indexOf('trộn') > -1 || sand_name.indexOf('tron') > -1) {
+                    return GOLD_SAND_TYPE;
+                }
+                if (sand_name.indexOf('lấp') > -1 || sand_name.indexOf('lap') > -1) {
+                    return FILLING_SAND_TYPE;
+                }
+            }
+            return -1; // unknown sand type
+        }
+
+    </script>
+}
+

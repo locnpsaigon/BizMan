@@ -1,0 +1,74 @@
+﻿@model BizMan.Models.AddRoleViewModel
+
+@{
+    ViewBag.Title = "Tạo chức danh";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+<!-- Main content -->
+<section class="content">
+    <div class="row">
+        <div class="col-md-8">
+            <!-- quick email widget -->
+            <div class="box box-info">
+                <div class="box-header with-border text-red">
+                    <i class="fa fa-plus-square"></i>
+                    <h4 class="box-title text-bold">Nhập thông tin chức danh</h4>
+                    <!-- tools box -->
+                    <div class="box-tools pull-right">
+                        <button class="btn btn-box-tool" data-widget="collapse" data-toggle="tooltip" title="" data-original-title="Collapse"><i class="fa fa-caret-up"></i></button>
+                    </div>
+                </div>
+
+                @using (Html.BeginForm())
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.ValidationSummary(true)
+
+                    <div class="box-body form-horizontal">
+                        <div class="form-group row">
+                            <div class="control-label col-sm-3">
+                                Tên chức danh:
+                            </div>
+                            <div class="editor-field col-sm-9">
+                                @Html.TextBoxFor(model => model.RoleName, new { @class = "form-control" })
+                                @Html.ValidationMessageFor(model => model.RoleName)
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="control-label col-sm-3">
+                                Mô tả chức danh:
+                            </div>
+                            <div class="editor-field col-sm-9">
+                                @Html.TextAreaFor(model => model.Description, new { @class = "form-control", @rows = "4" })
+                                @Html.ValidationMessageFor(model => model.Description)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="editor-field col-sm-9 col-sm-offset-3">
+                            <button class="btn btn-primary" type="submit" style="width:120px;">Tạo chức danh <i class="fa fa-arrow-circle-right"></i></button>
+                            <button class="btn btn-warning" type="reset" style="margin-left:4px; width:120px;">Nhập lại <i class="fa fa-refresh"></i></button>
+                        </div>
+                    </div>
+                }
+                <div class="clearfix" />
+            </div>
+        </div>
+    </div>
+
+</section><!-- /.content -->
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+}

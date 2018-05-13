@@ -1,0 +1,27 @@
+﻿@{
+    ViewBag.Title = "Trang chủ";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+<!-- Main content -->
+<section class="content">
+    <div class="lockscreen-wrapper">
+        <div class="lockscreen-logo text-danger">
+            <b>Admin</b> Cát Vàng
+        </div>
+        <div class="help-block text-center">
+            <img src="~/Content/images/credit/visa.png" />
+            <br />
+            <br />
+            <br />
+            Xin chào, <strong>@User.FirstName @User.LastName</strong>
+        </div>
+        <div class="text-center">
+            Chúc bạn một ngày tốt lành!
+        </div>
+        <div class="lockscreen-footer text-center">
+            Copyright © 2015-2016 <b><a href="email:admin@catvang.com" class="text-red">cv.ynes.vn</a></b><br>
+            All rights reserved<br>
+            Developed by <a href="mailto:locnp.saigon@gmail.com">camel nguyen</a>
+        </div>
+    </div>
+</section>

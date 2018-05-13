@@ -1,0 +1,264 @@
+﻿@{
+    ViewBag.Title = "Danh sách khoản chi";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+    <div class="box box-info">
+        <div class="box-header with-border text-red">
+            <i class="fa fa-list-alt"></i>
+            <h4 class="box-title text-bold">Danh sách khoản chi</h4>
+        </div><!-- /.box-header -->
+        <div class="box-body">
+            <div class="form-group form-inline">
+                <input id="date-from" type="text" class="form-control date-from date-picker" readonly="readonly" style="width:100px;" /> -
+                <input id="date-to" type="text" class="form-control date-to date-picker" readonly="readonly" style="width:100px;" />
+            </div>
+            <div class="form-group form-inline">
+                <input id="input-filter" type="text" class="form-control filter-text" style="width:200px;" placeholder="Nhập từ khóa tra cứu..." />
+                <button id="btn-search" type="button" value="Tra cứu" class="btn btn-primary" style="width:100px;"><i class="fa fa-search"></i> &nbsp; Tra cứu </button>
+                <button id="btn-export" class="btn btn-success btn-sm" type="button" onclick="exportExcel()" style="width:100px;"><i class="fa fa-save"></i> &nbsp; Xuất excel</button>
+            </div>
+        </div>
+        <div class="box-body box-expenses" style="margin-top:-20px;"></div><!-- /.box-products -->
+        <div class="box-body box-expenses-footer"></div><!-- /.box-paging -->
+        <div style="height:24px;"></div>
+    </div>
+</section>
+<!-- /. Main content -->
+@section Styles {
+    @Styles.Render("~/Content/bootstrap-dialog")
+    <link href="~/Scripts/plugins/datepicker/datepicker3.css" rel="stylesheet" />
+}
+
+@section Scripts {
+    @Scripts.Render("~/Bundles/bootstrap-dialog")
+    <script src="~/Scripts/plugins/datepicker/bootstrap-datepicker.js"></script>
+    <script>
+
+        // DOC was loaded
+        $(document).ready(function () {
+
+            // plugins setup
+            $('.date-picker').datepicker({
+                format: 'dd/mm/yyyy',
+                todayBtn: true,
+                todayHighlight: true,
+                autoclose: true
+            });
+
+            // assign default values
+            var today = new Date();
+            var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            $('.date-from').datepicker('setDates', firstDay);
+            $('.date-to').datepicker('setDates', today);
+
+
+            // load expense
+            ajaxLoadExpenses();
+
+        })
+
+        // Ajax to load & display product list
+        function ajaxLoadExpenses() {
+
+            // get request params
+            var date_from = $('.date-from').val();
+            var date_to = $('.date-to').val();
+            var filter_text = $('.filter-text').val();
+
+            showLoadingStatus();
+
+            $.ajax({
+                url: '/Expense/GetExpenses/?dateFrom=' + date_from + '&dateTo=' + date_to + '&filterText=' + filter_text,
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                success: function (data) {
+                    if (data.Error == 0) {
+                        showExpensesList(data.Expenses);
+                    }
+                    else {
+                        $(".box-expenses-footer").html("<span class='text-danger'>Lỗi " + data.Message + "</span>");
+                    }
+                },
+                error: function (xhr) {
+                    $(".box-expenses-footer").html("<span class='text-danger'>Lỗi " + xhr.responseText + "</span>");
+                }
+            });
+
+            return false;
+        }
+
+        // Show loading status
+        function showLoadingStatus() {
+            var container = $(".box-expenses");
+            var html_loading = '';
+            html_loading += '            <i class="fa fa-refresh fa-spin text-green"></i>\r\n';
+            html_loading += '            <span class="text-green" style="margin-left:4px;">Đang nạp danh sách khoản chi...</span>\r\n';
+            $(container).html(html_loading);
+        }
+
+        // Function to show expenses list
+        function showExpensesList(data) {
+            var container = $(".box-expenses");
+            var container_footer = $(".box-expenses-footer");
+            var html = '';
+            var html_footer = '';
+            // create expenses list html
+            html += '    <table class="table table-bordered table-nonfluid" style="min-width:500px;">\r\n';
+            html += '        <tbody>\r\n';
+            html += '            <tr class="bg-yellow">\r\n';
+            html += '               <th class="text-nowrap text-center">#</th>\r\n';
+            html += '                <th class="text-nowrap">Ngày</th>\r\n';
+            html += '                <th class="text-nowrap">Khoản chi</th>\r\n';
+            html += '                <th class="text-nowrap">Ghi chú</th>\r\n';
+            html += '                <th class="text-nowrap">Số tiền</th>\r\n';
+            html += '                <th class="text-nowrap">Thao tác</th>\r\n';
+            html += '            </tr>\r\n';
+            // add lines
+            var row_count = 0;
+            var total_amount = 0;
+            $.each(data, function (index, element) {
+                row_count++;
+                var date = new Date(element.Date.match(/\d+/)[0] * 1);
+                html += '            <tr>\r\n';
+                html += '               <td class="text-nowrap text-center">' + row_count + '</td>\r\n';
+                html += '                <td class="text-nowrap">' + formatDateVN(date) + '</td>\r\n';
+                html += '                <td class="text-nowrap">' + element.Name + '</td>\r\n';
+                html += '                <td>' + element.Description + '</td>\r\n';
+                html += '                <td class="text-nowrap text-right">' + element.Amount.format(0, 3, ',', '.') + '</td>\r\n';
+                html += '                <td class="text-nowrap">\r\n';
+                html += '                    <a href="/Expense/Edit/' + element.ExpenseId + '" class="btn btn-xs btn-primary"> Sửa</a>\r\n';
+                html += '                    <a href="#" class="btn btn-xs btn-danger" onclick="return ajaxDeleteExpense(' + element.ExpenseId + ', \'' + element.Name + ' - ' + formatDateVN(date) + '\', $(this).parent().parent())"> Xóa</a>\r\n';
+                html += '                </td>\r\n';
+                html += '            </tr>\r\n';
+
+                total_amount += element.Amount;
+            });
+            // add total lines
+            html += '            <tr class="text-bold bg-info">\r\n';
+            html += '               <td colspan="4" class="text-nowrap">Tộng cộng</td>\r\n';
+            html += '                <td class="text-nowrap text-right">' + total_amount.format(0, 3, ',', '.') + '</td>\r\n';
+            html += '                <td class="text-nowrap"></td>\r\n';
+            html += '            </tr>\r\n';
+            html += '       </tbody>\r\n';
+            html += '    </table>\r\n';
+
+            $(container).html(html);
+
+            // create footer html
+            if (row_count > 0) {
+                html_footer += '        Tổng cộng: <span class="text-red">' + row_count + '</span>';
+            }
+            else {
+                html_footer += '        <span class="text-danger">Không có khoản chi nào!</span>';
+            }
+
+            $(container_footer).html(html_footer);
+        }
+
+        // Ajax delete barge
+        function ajaxDeleteExpense(expenseId, name, line) {
+            // show confirmed dialog
+            BootstrapDialog.show({
+                message: 'Bạn có muốn xóa khoản chi [' + name + '] không?',
+                buttons: [{
+                    label: 'Xóa khoản chi',
+                    cssClass: 'btn-danger btn-sm',
+                    action: function (dialog) {
+                        $.ajax({
+                            url: '/Expense/Delete/?id=' + expenseId,
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+                            success: function (data) {
+                                if (data.Error == 0) {
+                                    BootstrapDialog.show({
+                                        title: "Xóa khoản chi",
+                                        message: data.Message,
+                                        buttons: [{
+                                            label: "Đóng",
+                                            cssClass: "btn-primary btn-sm",
+                                            action: function (dialog) {
+                                                dialog.close();
+                                            }
+                                        }]
+                                    });
+
+                                    // remove line
+                                    $(line).remove();
+                                }
+                                else {
+                                    BootstrapDialog.show({
+                                        title: "Lỗi xóa khoản chi",
+                                        message: data.Message,
+                                        buttons: [{
+                                            label: "Đóng",
+                                            cssClass: "btn-primary btn-sm",
+                                            action: function (dialog) {
+                                                dialog.close();
+                                            }
+                                        }]
+                                    });
+                                }
+                            },
+                            error: function (xhr) {
+                                BootstrapDialog.show({
+                                    title: "Lỗi xóa khoản chi",
+                                    message: xhr.responseText,
+                                    buttons: [{
+                                        label: "Đóng",
+                                        cssClass: "btn-primary btn-sm",
+                                        action: function (dialog) {
+                                            dialog.close();
+                                        }
+                                    }]
+                                });
+                            }
+                        });
+                        dialog.close();
+                    }
+                }, {
+                    label: 'Không xóa',
+                    cssClass: 'btn-primary btn-sm',
+                    action: function (dialog) {
+                        dialog.close();
+                    }
+                }]
+            });
+            return false;
+        }
+
+        // Export excel
+        function exportExcel() {
+            var date_from = $('.date-from').val();
+            var date_to = $('.date-to').val();
+            var filter_text = $('.filter-text').val();
+
+            var params =
+                    '?dateFrom=' + date_from +
+                    '&dateTo=' + date_to +
+                    '&filterText=' + filter_text;
+
+            window.location.href = '/Expense/ExportExcel?dateFrom=' + date_from + '&dateTo=' + date_to + '&filterText=' + filter_text;
+
+            return false;
+        }
+
+    </script>
+}
+
+
+

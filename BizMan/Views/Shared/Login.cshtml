@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="bizman.com" />
+    <meta name="description" content="bizman">
+    <meta name="keywords" content="bizman" />
+    <link rel="shortcut icon" href="~/favicon.png" />
+    <title>BizMan - @ViewBag.Title</title>
+    <!-- Tell the browser to be responsive to screen width -->
+    @Styles.Render("~/Content/bootstrap")
+    @Styles.Render("~/Content/FontAwesome")
+    @Styles.Render("~/Content/AdminLTE")
+    @RenderSection("Styles", required: false)
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="~/Scripts/html5shiv.min.js"></script>
+        <script src="~/Scripts/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body class="hold-transition login-page" style="background-image:url(../Content/images/bg_login.jpg);">
+    
+    @RenderBody()
+
+    @Scripts.Render("~/Bundles/jquery")
+    @Scripts.Render("~/Bundles/jqueryval")
+    @Scripts.Render("~/Bundles/bootstrap")
+    @Scripts.Render("~/Bundles/FontAwesome")
+    @Scripts.Render("~/Bundles/AdminLTE")
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

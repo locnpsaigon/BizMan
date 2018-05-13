@@ -1,0 +1,344 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="bizman.com" />
+    <meta name="description" content="bizman">
+    <meta name="keywords" content="bizman" />
+    <link rel="shortcut icon" href="~/favicon.png" />
+    <title>CatVANG - @ViewBag.Title</title>
+    <!-- Tell the browser to be responsive to screen width -->
+    @Styles.Render("~/Content/bootstrap")
+    @Styles.Render("~/Content/FontAwesome")
+    @Styles.Render("~/Content/AdminLTE")
+    @RenderSection("Styles", required: false)
+    @{
+        // check if current logon user is an administrator
+        var isAdmin = (User != null && User.Roles.Contains("Administrators"));
+    }
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="~/Scripts/html5shiv.min.js"></script>
+        <script src="~/Scripts/respond.min.js"></script>
+    <![endif]-->
+</head>
+<body class="hold-transition skin-blue sidebar-mini">
+    <div class="wrapper">
+        <header class="main-header">
+            <!-- Logo -->
+            <a href="/" class="logo">
+                <!-- mini logo for sidebar mini 50x50 pixels -->
+                <span class="logo-mini"><b>CT</b>V</span>
+                <!-- logo for regular state and mobile devices -->
+                <span class="logo-lg"><b>Admin Cát </b>Vàng</span>
+            </a>
+            <!-- Header Navbar: style can be found in header.less -->
+            <nav class="navbar navbar-static-top" role="navigation">
+                <!-- Sidebar toggle button-->
+                <a href="#" class="sidebar-toggle" data-toggle="offcanvas" role="button">
+                    <span class="sr-only">Toggle navigation</span>
+                </a>
+                <div class="navbar-custom-menu">
+                    <ul class="nav navbar-nav">
+                        @if (User != null)
+                        {
+                            <!-- User Account: style can be found in dropdown.less -->
+                            <li class="dropdown user user-menu">
+                                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                                    <img src="/Content/images/avatar6.png" class="user-image" alt="User Image">
+                                    <span class="hidden-xs">Xin chào, <strong>@User.Identity.Name</strong></span>
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <!-- User image -->
+                                    <li class="user-header">
+                                        <img src="/Content/images/account_avatar.png" class="img-circle" alt="User Image">
+                                        <p>
+                                            @User.Identity.Name - @User.FirstName @User.LastName
+                                            <small>Thành viên từ @User.CreationDate.ToString("MM/yyyy")</small>
+                                        </p>
+                                    </li>
+                                    <!-- Menu Footer-->
+                                    <li class="user-footer">
+                                        <div class="pull-left">
+                                            <a href="/User/ChangePass" class="btn btn-default btn-flat">Đổi mật khẩu</a>
+                                        </div>
+                                        <div class="pull-right">
+                                            <a href="/Auth/Logout" class="btn btn-default btn-flat">Đăng xuất</a>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="dropdown user user-menu">
+                                <a href="/Auth/Login" class="dropdown-toggle">Đăng nhập</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </nav>
+        </header>
+        <!-- Left side column. contains the logo and sidebar -->
+        <aside class="main-sidebar">
+            <!-- sidebar: style can be found in sidebar.less -->
+            <section class="sidebar">
+                <!-- Sidebar user panel -->
+                <div class="user-panel">
+                    <div class="pull-left image">
+                        <img src="/Content/images/avatar6.png" class="img-circle" alt="User Image">
+                    </div>
+                    <div class="pull-left info">
+                        @if (User != null)
+                        {
+                            <p><a href="/User/ChangePass">@User.Identity.Name</a> &nbsp; <a href="/Auth/Logout"><i class="fa fa-sign-out text-gray" title="Đăng xuất"></i></a></p>
+                            <a href="#"><i class="fa fa-circle text-success"></i> Online</a>
+                        }
+                        else
+                        {
+                            <p><a href="/Auth/Login" style="font-weight:400;">Đăng nhập</a></p>
+                            <a href="#"><i class="fa fa-circle text-gray"></i> Offline</a>
+                        }
+                    </div>
+                </div>
+                <!-- sidebar menu: : style can be found in sidebar.less -->
+                <ul class="sidebar-menu">
+                    <li class="treeview">
+                        <a href="#">
+                            <i class="fa fa-bar-chart text-yellow"></i> <span>Kế toán</span> <i class="fa fa-angle-left pull-right"></i>
+                        </a>
+                        <ul class="treeview-menu menu-open" style="display:block;">
+                            <li><a href="/Order/Add"><i class="fa fa-angle-right"></i> Nhập chuyến</a></li>
+                            <li><a href="/Order"><i class="fa fa-angle-right"></i> Danh sách chuyến</a></li>
+                            <li><a href="/Report/ReportBoatsData"><i class="fa fa-angle-right"></i> Số liệu ghe</a></li>
+                            @if (isAdmin)
+                            {
+                                <li><a href="/Expense/Add"><i class="fa fa-angle-right"></i> Thêm khoản chi</a></li>
+                                <li><a href="/Expense"><i class="fa fa-angle-right"></i> Danh sách khoản chi</a></li>
+                                <li><a href="/Report/ReportFinance"><i class="fa fa-angle-right"></i> Báo cáo tài chính</a></li>
+                            }
+                        </ul>
+                    </li>
+                    <li class="treeview">
+                        <a href="#">
+                            <i class="fa fa-file-text text-yellow"></i> <span>Danh mục</span> <i class="fa fa-angle-left pull-right"></i>
+                        </a>
+                        <ul class="treeview-menu" style="display:none;">
+                            <li><a href="/Boat/Add"><i class="fa fa-angle-right"></i> Thêm ghe</a></li>
+                            <li><a href="/Boat"><i class="fa fa-angle-right"></i> Danh sách ghe</a></li>
+                            <li><a href="/Barge/Add"><i class="fa fa-angle-right"></i> Thêm sà lan</a></li>
+                            <li><a href="/Barge"><i class="fa fa-angle-right"></i> Danh sách sà lan</a></li>
+                            <li><a href="/Customer/Add"><i class="fa fa-angle-right"></i> Thêm đơn vị</a></li>
+                            <li><a href="/Customer"><i class="fa fa-angle-right"></i> Danh sách đơn vị</a></li>
+                            @if (isAdmin)
+                            {
+                                <li><a href="/Sand/Add"><i class="fa fa-angle-right"></i> Thêm sản phẩm cát</a></li>
+                                <li><a href="/Sand"><i class="fa fa-angle-right"></i> Danh sách sản phẩm cát</a></li>
+                            }
+                        </ul>
+                    </li>
+                    @if (isAdmin)
+                    {
+                        <li class="treeview">
+                            <a href="#">
+                                <i class="fa fa-gears text-yellow"></i> <span>Hệ thống</span> <i class="fa fa-angle-left pull-right"></i>
+                            </a>
+                            <ul class="treeview-menu" style="display:none;">
+                                <li><a href="/User/Add"><i class="fa fa-angle-right"></i> Tạo tài khoản</a></li>
+                                <li><a href="/User/"><i class="fa fa-angle-right"></i> Danh sách tài khoản</a></li>
+                                <li><a href="/Role/Add"><i class="fa fa-angle-right"></i> Tạo chức danh</a></li>
+                                <li><a href="/Role/"><i class="fa fa-angle-right"></i> Danh mục chức danh</a></li>
+                                <li><a href="/ActionLog/"><i class="fa fa-angle-right"></i> Lịch sử truy cập</a></li>
+                            </ul>
+                        </li>
+                    }
+                </ul> <!--/.sidebar menu-->
+            </section>
+            <!-- /.sidebar -->
+        </aside>
+
+        <!-- Content Wrapper. Contains page content -->
+        <div class="content-wrapper" style="background-image:url(/Content/images/bg_login.jpg)">
+            @RenderBody()
+        </div><!-- /.content-wrapper -->
+        <footer class="main-footer">
+            <div class="pull-right hidden-xs">
+                <small>Version</small> 2.3.0
+            </div>
+            <small>Copyright &copy; 2015 <a href="mailto:admin@catvang.com">cv.ynes.vn</a></small>
+        </footer>
+        <!-- Control Sidebar -->
+        @*<aside class="control-sidebar control-sidebar-dark">
+                <!-- Create the tabs -->
+                <ul class="nav nav-tabs nav-justified control-sidebar-tabs">
+                    <li><a href="#control-sidebar-home-tab" data-toggle="tab"><i class="fa fa-home"></i></a></li>
+                    <li><a href="#control-sidebar-settings-tab" data-toggle="tab"><i class="fa fa-gears"></i></a></li>
+                </ul>
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <!-- Home tab content -->
+                    <div class="tab-pane" id="control-sidebar-home-tab">
+                        <h3 class="control-sidebar-heading">Recent Activity</h3>
+                        <ul class="control-sidebar-menu">
+                            <li>
+                                <a href="javascript::;">
+                                    <i class="menu-icon fa fa-birthday-cake bg-red"></i>
+                                    <div class="menu-info">
+                                        <h4 class="control-sidebar-subheading">Langdon's Birthday</h4>
+                                        <p>Will be 23 on April 24th</p>
+                                    </div>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="javascript::;">
+                                    <i class="menu-icon fa fa-user bg-yellow"></i>
+                                    <div class="menu-info">
+                                        <h4 class="control-sidebar-subheading">Frodo Updated His Profile</h4>
+                                        <p>New phone +1(800)555-1234</p>
+                                    </div>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="javascript::;">
+                                    <i class="menu-icon fa fa-envelope-o bg-light-blue"></i>
+                                    <div class="menu-info">
+                                        <h4 class="control-sidebar-subheading">Nora Joined Mailing List</h4>
+                                        <p>nora@example.com</p>
+                                    </div>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="javascript::;">
+                                    <i class="menu-icon fa fa-file-code-o bg-green"></i>
+                                    <div class="menu-info">
+                                        <h4 class="control-sidebar-subheading">Cron Job 254 Executed</h4>
+                                        <p>Execution time 5 seconds</p>
+                                    </div>
+                                </a>
+                            </li>
+                        </ul><!-- /.control-sidebar-menu -->
+                        <h3 class="control-sidebar-heading">Tasks Progress</h3>
+                        <ul class="control-sidebar-menu">
+                            <li>
+                                <a href="javascript::;">
+                                    <h4 class="control-sidebar-subheading">
+                                        Custom Template Design
+                                        <span class="label label-danger pull-right">70%</span>
+                                    </h4>
+                                    <div class="progress progress-xxs">
+                                        <div class="progress-bar progress-bar-danger" style="width: 70%"></div>
+                                    </div>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="javascript::;">
+                                    <h4 class="control-sidebar-subheading">
+                                        Update Resume
+                                        <span class="label label-success pull-right">95%</span>
+                                    </h4>
+                                    <div class="progress progress-xxs">
+                                        <div class="progress-bar progress-bar-success" style="width: 95%"></div>
+                                    </div>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="javascript::;">
+                                    <h4 class="control-sidebar-subheading">
+                                        Laravel Integration
+                                        <span class="label label-warning pull-right">50%</span>
+                                    </h4>
+                                    <div class="progress progress-xxs">
+                                        <div class="progress-bar progress-bar-warning" style="width: 50%"></div>
+                                    </div>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="javascript::;">
+                                    <h4 class="control-sidebar-subheading">
+                                        Back End Framework
+                                        <span class="label label-primary pull-right">68%</span>
+                                    </h4>
+                                    <div class="progress progress-xxs">
+                                        <div class="progress-bar progress-bar-primary" style="width: 68%"></div>
+                                    </div>
+                                </a>
+                            </li>
+                        </ul><!-- /.control-sidebar-menu -->
+                    </div><!-- /.tab-pane -->
+                    <!-- Stats tab content -->
+                    <div class="tab-pane" id="control-sidebar-stats-tab">Stats Tab Content</div><!-- /.tab-pane -->
+                    <!-- Settings tab content -->
+                    <div class="tab-pane" id="control-sidebar-settings-tab">
+                        <form method="post">
+                            <h3 class="control-sidebar-heading">General Settings</h3>
+                            <div class="form-group">
+                                <label class="control-sidebar-subheading">
+                                    Report panel usage
+                                    <input type="checkbox" class="pull-right" checked>
+                                </label>
+                                <p>
+                                    Some information about this general settings option
+                                </p>
+                            </div><!-- /.form-group -->
+                            <div class="form-group">
+                                <label class="control-sidebar-subheading">
+                                    Allow mail redirect
+                                    <input type="checkbox" class="pull-right" checked>
+                                </label>
+                                <p>
+                                    Other sets of options are available
+                                </p>
+                            </div><!-- /.form-group -->
+                            <div class="form-group">
+                                <label class="control-sidebar-subheading">
+                                    Expose author name in posts
+                                    <input type="checkbox" class="pull-right" checked>
+                                </label>
+                                <p>
+                                    Allow the user to show his name in blog posts
+                                </p>
+                            </div><!-- /.form-group -->
+                            <h3 class="control-sidebar-heading">Chat Settings</h3>
+                            <div class="form-group">
+                                <label class="control-sidebar-subheading">
+                                    Show me as online
+                                    <input type="checkbox" class="pull-right" checked>
+                                </label>
+                            </div><!-- /.form-group -->
+                            <div class="form-group">
+                                <label class="control-sidebar-subheading">
+                                    Turn off notifications
+                                    <input type="checkbox" class="pull-right">
+                                </label>
+                            </div><!-- /.form-group -->
+                            <div class="form-group">
+                                <label class="control-sidebar-subheading">
+                                    Delete chat history
+                                    <a href="javascript::;" class="text-red pull-right">Xóa</a>
+                                </label>
+                            </div><!-- /.form-group -->
+                        </form>
+                    </div><!-- /.tab-pane -->
+                </div>
+            </aside>*@<!-- /.control-sidebar -->
+        <!-- Add the sidebar's background. This div must be placed
+             immediately after the control sidebar -->
+        <div class="control-sidebar-bg"></div>
+    </div><!-- ./wrapper -->
+    <!-- Slimscroll -->
+    @*<script src="/Scripts/plugins/slimScroll/jquery.slimscroll.min.js"></script>*@
+    <!-- FastClick -->
+    @*<script src="/Scripts/plugins/fastclick/fastclick.min.js"></script>*@
+
+    @Scripts.Render("~/Bundles/jquery")
+    @Scripts.Render("~/Bundles/bootstrap")
+    @Scripts.Render("~/Bundles/FontAwesome")
+    @Scripts.Render("~/Bundles/AdminLTE")
+    @RenderSection("Scripts", required: false)
+
+</body>
+
+</html>

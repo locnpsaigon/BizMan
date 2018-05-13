@@ -1,0 +1,17 @@
+﻿@{
+    ViewBag.Title = "Message";
+    Layout = "~/Views/Shared/Admin.cshtml";
+}
+
+<section class="content">
+    <div class="error-page" style="margin-top:64px;">
+        <h4 class="headline text-red"> 500</h4>
+        <div class="error-content">
+            <h4 class="text-danger"><i class="fa fa-warning text-red"></i> Thông báo</h4>
+            <br />
+            <p>Có lỗi xảy ra trong quá trình truy cập:</p>
+            <p>@ViewBag.Message</p>
+            <p>Bạn vui lòng liên hệ ban quản trị để được hỗ trợ hoặc <a href="/Home/">click vào đây</a> để về trang chính.</p>
+        </div><!-- /.error-content -->
+    </div><!-- /.error-page -->
+</section>

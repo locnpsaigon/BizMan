@@ -1,0 +1,916 @@
+﻿@model BizMan.Models.AddOrderViewModel
+@{
+    ViewBag.Title = "Thêm thông tin chuyến";
+    Layout = "~/Views/Shared/Admin.cshtml";
+
+    var classHiddenAdminColumn = (User != null && User.Roles.Contains("Administrators")) ? "" : "hide-column";
+
+}
+<!-- Content Header (Page header) -->
+<section class="content-header">
+    <h1>
+        &nbsp;
+    </h1>
+    <ol class="breadcrumb">
+        <li><a href="/"><i class="fa fa-dashboard"></i> Trang chủ</a></li>
+        <li class="active">@ViewBag.Title</li>
+    </ol>
+</section>
+<!-- Main content -->
+<section class="content">
+    <div class="row">
+        <div class="col-lg-12">
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+                @Html.ValidationSummary(true)
+                @Html.Hidden("CustomerIdHidden", Model.CustomerId)
+                <div class="box box-info">
+                    <!--barge info header-->
+                    <div class="box-header with-border text-red">
+                        <i class="fa fa-ship"></i>
+                        <h4 class="box-title text-bold">Nhập thông tin chuyến</h4>
+                        <div class="box-tools pull-right">
+                            <button class="btn btn-box-tool" data-widget="collapse" data-toggle="tooltip" title="" data-original-title="Collapse"><i class="fa fa-caret-up"></i></button>
+                        </div>
+                    </div>
+                    <!--barge info body-->
+                    <div class="box-body form-horizontal">
+
+                        <!-- Ngày lập -->
+                        <div class="form-group row">
+                            <div class="control-label col-md-4 col-lg-3">
+                                Ngày lập:
+                            </div>
+                            <div class="editor-field col-md-8 col-lg-9">
+                                <div class="form-inline">
+                                    <div style="display:table">
+                                        <div style="display:table-row">
+                                            <div style="display:table-cell;">@Html.TextBoxFor(model => model.OrderDate, new { @class = "form-control date-picker", @style = "width:100px;" })</div>
+                                            <div style="display:table-cell; padding:4px;">@Html.DropDownListFor(model => model.CustomerId, Enumerable.Empty<SelectListItem>(), "-- Chọn đơn vị --", new { @class = "form-control", @style = "width:204px;" })</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                @Html.ValidationMessageFor(model => model.OrderDate)
+                                @Html.ValidationMessageFor(model => model.CustomerId)
+                            </div>
+                        </div>
+
+                        <!-- Chọn loại cát -->
+                        <div class="form-group row">
+                            <div class="control-label col-md-4 col-lg-3">
+                                Chọn loại cát:
+                            </div>
+                            <div class="editor-field col-md-8 col-lg-9">
+                                @Html.DropDownListFor(model => model.SandId, Enumerable.Empty<SelectListItem>(), null, new
+                                   {
+                                       @class = "select-sand form-control",
+                                       @onchange = "setSelectedSand(this.value)",
+                                       @style = "width:310px;"
+                                   })
+                                @Html.ValidationMessageFor(model => model.SandId)
+                            </div>
+                        </div>
+
+                        <!-- Giá bán / giá mỏ -->
+                        <div class="form-group row">
+                            <div class="control-label col-md-4 col-lg-3">
+                                <span>Giá Bán</span>
+                                <span class="@classHiddenAdminColumn"> / Giá mỏ</span>:
+                            </div>
+                            <div class="editor-field col-md-8 col-lg-9">
+                                <div class="form-inline">
+                                    <div style="display:table;">
+                                        <div style="display:table-row;">
+                                            <div style="display:table-cell;">
+                                                @Html.TextBoxFor(model => model.CustomerPrice, new
+                                                    {
+                                                        @class = "customer-price form-control text-right number-input",
+                                                        @placeholder = "0",
+                                                        @onkeyup = "updateLinesSummary()",
+                                                        @style = "width:100px;"
+                                                    })
+                                            </div>
+                                            <div class="@classHiddenAdminColumn" style="display:table-cell;">
+                                                @Html.TextBoxFor(model => model.ProviderPrice, new
+                                                    {
+                                                        @class = "provider-price form-control text-right number-input",
+                                                        @placeholder = "0",
+                                                        @onkeyup = "updateLinesSummary()",
+                                                        @style = "width:100px; margin-left:4px;"
+                                                    })
+                                            </div>
+                                            <div class="@classHiddenAdminColumn" style="display:table-cell;">
+                                                @Html.TextBoxFor(model => model.BaseTransportPrice, new
+                                                    {
+                                                        @class = "base-transport-price form-control text-right number-input",
+                                                        @placeholder = "0",
+                                                        @onkeyup = "updateLinesPrice(parseFloat(this.value.replace(new RegExp(',', 'g'), '')))",
+                                                        @style = "width:100px; margin-left:4px;"
+                                                    })
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                @Html.ValidationMessageFor(model => model.CustomerPrice)
+                                @Html.ValidationMessageFor(model => model.ProviderPrice)
+                            </div>
+                        </div>
+
+                        <!-- Chọn sà lan -->
+                        <div class="form-group row">
+                            <div class="control-label col-md-4 col-lg-3">
+                                Chọn sà lan:
+                            </div>
+                            <div class="editor-field col-md-8 col-lg-9">
+                                @Html.DropDownListFor(model => model.BargeId, Enumerable.Empty<SelectListItem>(), "-- Chọn sà lan --", new
+                                   {
+                                       @class = "select-barge form-control",
+                                       @onchange = "setSelectedBarge(this.value)",
+                                       @style = "width:310px;"
+                                   })
+                                @Html.ValidationMessageFor(model => model.BargeId)
+                            </div>
+                        </div>
+
+                        <!-- Khối tính mỏ / giảm trừ tạp chất -->
+                        <div class="form-group row @classHiddenAdminColumn">
+                            <div class="control-label col-md-4 col-lg-3">
+                                Khối Tính mỏ / Giảm trừ:
+                            </div>
+                            <div class="editor-field col-md-8 col-lg-9">
+                                <div style="display:table">
+                                    <div style="display:table-row">
+                                        <div style="display:table-cell">
+                                            @Html.TextBoxFor(model => model.VolumePurchase, new
+                                                {
+                                                    @class = "volume-purchase form-control text-right number-input",
+                                                    @placeholder = "0",
+                                                    @onkeyup = "updateLinesSummary()",
+                                                    @style = "width:100px;"
+                                                })
+                                            @Html.ValidationMessageFor(model => model.VolumePurchase)
+                                        </div>
+                                        <div style="display:table-cell">
+                                            @Html.TextBoxFor(model => model.VolumePurchaseDecrease, new
+                                                {
+                                                    @class = "volume-purchase-decrease form-control text-right number-input",
+                                                    @placeholder = "0",
+                                                    @onkeyup = "updateLinesSummary()",
+                                                    @style = "width:100px; margin-left:4px;"
+                                                })
+                                            @Html.ValidationMessageFor(model => model.VolumePurchaseDecrease)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Khối tính doanh số cát lấp -->
+                        <div class="volume-revenue-row form-group row" style="display:none;">
+                            <div class="control-label col-md-4 col-lg-3">
+                                Khối Doanh số
+                            </div>
+                            <div class="editor-field col-md-8 col-lg-9">
+                                @Html.TextBoxFor(model => model.VolumeRevenue, new
+                                    {
+                                        @class = "volume-revenue form-control text-right number-input",
+                                        @placeholder = "0",
+                                        @onkeyup = "updateLinesSummary()",
+                                        @style = "width:100px;"
+                                    })
+                                @Html.ValidationMessageFor(model => model.VolumeRevenue)
+                            </div>
+                        </div>
+
+                        <!-- Khối gia công cát vàng (promotion) -->
+                        <div class="volume-promotion-row form-group row" style="display:none;">
+                            <div class="control-label col-md-4 col-lg-3">
+                                Gia công
+                            </div>
+                            <div class="editor-field col-md-8 col-lg-9">
+                                @Html.TextBoxFor(model => model.VolumePromotion, new
+                                    {
+                                        @class = "volume-promotion form-control text-right number-input",
+                                        @placeholder = "0",
+                                        @onkeyup = "updateLinesSummary()",
+                                        @style = "width:100px;"
+                                    })
+                                @Html.ValidationMessageFor(model => model.VolumePromotion)
+                            </div>
+                        </div>
+                        
+                        <!-- Save/Reset buttons -->
+                        <div class="form-group row">
+                            <div class="col-md-8 col-lg-9 col-md-offset-4 col-lg-offset-3">
+                                <button class="btn btn-submit btn-primary btn-sm" type="submit" style="width:100px;">Lưu chuyến <i class="fa fa-arrow-circle-right"></i></button>
+                                <button class="btn btn-reset btn-warning btn-sm" type="button" style="width:100px;">Nhập lại <i class="fa fa-refresh"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Thông tin ghe -->
+                        <div class="form-group row">
+                            <div class="control-label col-md-4 col-lg-3">
+                                Thông tin ghe:
+                            </div>
+                            <div class="editor-field col-md-8 col-lg-9">
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="editor-field col-md-8 col-lg-9">
+
+                                <table class="table table-condensed table-nonfluid" style="min-width:790px;">
+                                    <tbody class="tb-details-header">
+                                        <tr>
+                                            <th><a href="#" class="btn btn-success btn-sm" onclick="return addLine();" style="width:30px;">+</a></th>
+                                            <th>Ghe</th>
+                                            <th>Số chuyến</th>
+                                            <th>Khối lẻ</th>
+                                            <th>Khối ghe</th>
+                                            <th>Tổng khối</th>
+                                            <th>Đơn giá</th>
+                                            <th>Thành tiền</th>
+                                        </tr>
+                                    </tbody>
+                                    <tbody class="tb-details-content">
+                                        @for (int i = 0; i < Model.OrderDetails.Count; i++)
+                                        {
+                                            <tr class="editor-field tb-row-details">
+                                                <td>
+                                                    <a href="#" class="btn btn-danger btn-sm" onclick="return removeLine($(this).parent().parent());" style="width:30px;">-</a>
+                                                </td>
+                                                <td>
+                                                    @Html.DropDownListFor(
+                                                        model => model.OrderDetails[i].BoatId,
+                                                        BizMan.Helpers.Common.CreateDropDownListData((List<SelectListItem>)ViewBag.Boats,
+                                                        Model.OrderDetails[i].BoatId.ToString()),
+                                                        "-- Chọn ghe --",
+                                                        new
+                                                        {
+                                                            @class = "line-boat-select form-control",
+                                                            @style = "width:160px;",
+                                                            @onchange = "updateLineValues($(this).parent().parent())"
+                                                        })
+                                                    @Html.ValidationMessageFor(model => model.OrderDetails[i].BoatId)
+                                                </td>
+                                                <td>
+                                                    @Html.TextBoxFor(model => model.OrderDetails[i].TransportTimes, new { @class = "line-transport-times form-control text-right number-input-0", @placeholder = "0", @onKeyUp = "updateLineValues($(this).parent().parent())", @style = "width:80px;" })
+                                                    @Html.ValidationMessageFor(model => model.OrderDetails[i].TransportTimes)
+                                                </td>
+                                                <td>
+                                                    @Html.TextBoxFor(model => model.OrderDetails[i].ExtraVolume, new { @class = "line-extra-volume form-control text-right number-input", @placeholder = "0", @onKeyUp = "updateLineValues($(this).parent().parent())", @style = "width:80px;" })
+                                                    @Html.ValidationMessageFor(model => model.OrderDetails[i].ExtraVolume)
+                                                </td>
+                                                <td>
+                                                    @Html.TextBoxFor(model => model.OrderDetails[i].BoatVolume, new { @class = "line-boat-volume form-control text-right number-input", @placeholder = "0", @readonly = "readonly", @style = "width:80px;" })
+                                                    @Html.ValidationMessageFor(model => model.OrderDetails[i].BoatVolume)
+                                                </td>
+                                                <td>
+                                                    @Html.TextBoxFor(model => model.OrderDetails[i].TotalVolume, new { @class = "line-total-volume form-control text-right number-input", @placeholder = "0", @readonly = "readonly", @style = "width:80px;" })
+                                                </td>
+                                                <td>
+                                                    @Html.TextBoxFor(model => model.OrderDetails[i].TransportPrice, new { @class = "line-transport-price form-control text-right number-input-0", @placeholder = "0", @onKeyUp = "updateLineValues($(this).parent().parent())", @style = "width:80px;" })
+                                                    @Html.ValidationMessageFor(model => model.OrderDetails[i].TransportPrice)
+                                                </td>
+                                                <td>
+                                                    @Html.TextBoxFor(model => model.OrderDetails[i].Amount, new { @class = "line-amount form-control text-right number-input-0", @placeholder = "0", @readonly = "readonly", @style = "width:120px;" })
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                    <tbody class="tb-details-summary">
+                                        <tr class="text-blue">
+                                            <td colspan="2">Tổng cộng:</td>
+                                            <td colspan="4" class="total-transport-volumes text-right" style="padding-right:18px;">0</td>
+                                            <td colspan="2" class="total-transport-amount text-right" style="padding-right:18px;">0</td>
+                                        </tr>
+                                    </tbody>
+                                </table><!--table-->
+                            </div>
+                        </div>
+                    </div>
+                    <div class="box-footer no-padding" style="max-width:400px;">
+                        <ul class="nav nav-pills nav-stacked">
+                            <li><a>Doanh thu <span class="revenue-amount pull-right text-blue"> 0</span></a></li>
+                            <li class="@classHiddenAdminColumn"><a>Trả tiền mỏ <span class="purchase-amount pull-right text-danger"> 0</span></a></li>
+                            <li><a>Trả tiền ghe <span class="transport-amount pull-right text-danger"> 0</span></a></li>
+                            <li class="@classHiddenAdminColumn"><a>Lợi nhuận <span class="profit-amount pull-right text-green"> 0</span></a></li>
+                        </ul>
+                    </div>
+                    <div class="clearfix" style="margin-top:24px;" />
+                </div>
+            }
+        </div>
+    </div><!--/.row-->
+</section><!-- /.section -->
+@section Styles {
+    <link href="~/Scripts/plugins/datepicker/datepicker3.css" rel="stylesheet" />
+    <link href="~/Content/select2.min.css" rel="stylesheet" />
+    <style>
+        .hide-column {
+            display: none !important;
+        }
+    </style>
+}
+
+@section Scripts {
+    @Scripts.Render("~/bundles/jqueryval")
+    <script src="~/Scripts/jquery.number.min.js"></script>
+    <script src="~/Scripts/plugins/datepicker/bootstrap-datepicker.js"></script>
+    <script src="~/Scripts/select2.min.js"></script>
+    <script>
+
+        var g_barges;
+        var g_customers;
+        var g_sands;
+        var g_boats;
+        var g_selected_barge_id;
+        var g_selected_sand_id;
+
+        var GOLD_SAND_TYPE = 1;
+        var FILLING_SAND_TYPE = 2;
+
+        /* Document was loaded */
+        $(document).ready(function () {
+            ajaxLoadCustomers();
+            ajaxLoadBarges();
+            ajaxLoadSands();
+            ajaxLoadBoats();
+
+            setupUI();
+            registerEvents();
+        })
+
+        // Function to setup event handlers
+        function registerEvents() {
+            $('.date-picker').datepicker({
+                format: 'dd/mm/yyyy',
+                todayBtn: true,
+                todayHighlight: true,
+                autoclose: true
+            });
+
+            $('.number-input').number(true, 0);
+
+            $('.btn-reset').on('click', function () {
+                $('form').get(0).reset();
+                setSelectedSand($('.select-sand').val());
+            });
+        }
+
+        // Function to setup UI
+        function setupUI() {
+
+            // select default sand
+            setSelectedSand($('.select-sand').val());
+
+            // suggestion setup
+            $('.select-barge').select2();
+
+            // add a new order details line if there is no line existed
+            var hasAnyOrderDetails = $('.tb-details-content .tb-row-details').length > 0;
+            if (hasAnyOrderDetails == false) {
+                addLine();
+            }
+        }
+
+        // Ajax function to load barges
+        function ajaxLoadBarges() {
+            var container = document.getElementById("BargeId");
+            $.ajax({
+                url: '/Barge/GetAllBarges',
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                async: false,
+                success: function (data) {
+                    if (data.Error == 0) {
+                        g_barges = data.Barges;
+                        $.each(g_barges, function (index, element) {
+                            container.options[container.options.length] = new Option('\u00A0' + element.BargeCode, element.BargeId, false, false);
+                        })
+                    }
+                    else {
+                        $(container).html("<span class='text-danger'>Lỗi " + data.Message + "</span>");
+                    }
+                },
+                error: function (xhr) {
+                    $(container).html("<span class='text-danger'>Lỗi " + xhr.responseText + "</span>");
+                }
+            });
+            return false;
+        }
+
+        // Ajax function to load customers
+        function ajaxLoadCustomers() {
+            var select_customer = document.getElementById("CustomerId");
+            $.ajax({
+                url: '/Customer/GetAllCustomers',
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                async: false,
+                success: function (data) {
+                    if (data.Error == 0) {
+
+                        g_customers = data.Customers;
+
+                        // add customer options
+                        $.each(g_customers, function (index, element) {
+                            var selected_customer_id = $("#CustomerIdHidden").val();
+                            select_customer.options[select_customer.options.length] = new Option('\u00A0' +
+                                element.CustomerName, element.CustomerId, false,
+                                (selected_customer_id == element.CustomerId));
+                        })
+                    }
+                    else {
+                        BootstrapDialog.show({
+                            type: BootstrapDialog.TYPE_SUCCESS,
+                            title: "Lỗi nạp danh sách đơn vị",
+                            message: data.Message,
+                            buttons: [{
+                                label: "Đóng",
+                                cssClass: "btn-primary btn-sm",
+                                action: function (dialog) {
+                                    dialog.close();
+                                }
+                            }]
+                        });
+                    }
+                },
+                error: function (xhr) {
+                    BootstrapDialog.show({
+                        type: BootstrapDialog.TYPE_SUCCESS,
+                        title: 'Lỗi nạp danh sách đơn vị',
+                        message: 'Lỗi kết nối mạng!',
+                        buttons: [{
+                            label: 'Đóng',
+                            cssClass: 'btn-primary btn-sm',
+                            action: function (dialog) {
+                                dialog.close();
+                            }
+                        }]
+                    });
+                }
+            });
+            return false;
+        }
+
+        // Ajax function to load sands
+        function ajaxLoadSands() {
+            var select_sand = document.getElementById('SandId');
+            $.ajax({
+                url: '/Sand/GetAllSands',
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                async: false,
+                success: function (data) {
+                    if (data.Error == 0) {
+                        g_sands = data.Sands;
+                        $.each(g_sands, function (index, element) {
+                            select_sand.options[select_sand.options.length] = new Option('\u00A0' + element.SandName, element.SandId, false, false);
+                        })
+                    }
+                    else {
+                        console.debug("DBG", data.Message)
+                    }
+                },
+                error: function (xhr) {
+                    console.debug("DBG", xhr.responseText)
+                }
+            });
+            return false;
+        }
+
+        // Ajax function to load boats
+        function ajaxLoadBoats() {
+            $.ajax({
+                url: '/Boat/GetAllBoats',
+                type: 'POST',
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                async: false,
+                success: function (data) {
+                    if (data.Error == 0) {
+                        g_boats = data.Boats;
+                    }
+                    else {
+                        console.debug("DBG", data.Message)
+                    }
+                },
+                error: function (xhr) {
+                    console.debug("DBG", xhr.responseText)
+                }
+            });
+            return false;
+        }
+
+        // Function to get specified Barge bject from collection
+        function getBarge(barge_id) {
+            var barge = undefined;
+            if (g_barges != undefined) {
+                $.each(g_barges, function (index, element) {
+                    if (element.BargeId == barge_id)
+                        return barge = element;
+                })
+            }
+            return barge;
+        }
+
+        // Function to get specified Sand bject from collection
+        function getSand(sand_id) {
+            var sand = undefined;
+            if (g_sands != undefined) {
+                $.each(g_sands, function (index, element) {
+                    if (element.SandId == sand_id)
+                        return sand = element;
+                })
+            }
+            return sand;
+        }
+
+        // Function to get specified boat object from collection
+        function getBoat(boat_id) {
+            var boat = undefined;
+            if (g_boats != undefined) {
+                $.each(g_boats, function (index, element) {
+                    if (element.BoatId == boat_id)
+                        return boat = element;
+                })
+            }
+            return boat;
+        }
+
+        // Function to show bar info
+        function setSelectedBarge(barge_id) {
+
+            // reset volume values
+            $('.volume-purchase').val(0);
+            $('.volume-purchase-decrease').val(0);
+            $('.volume-revenue').val(0);
+            $('.volume-promotion').val(0);
+
+            // get barge info
+            var barge = getBarge(barge_id);
+
+            // show barge info
+            if (barge != undefined) {
+
+                g_selected_barge_id = barge_id;
+
+                // get sand info
+                var sand = getSand(g_selected_sand_id);
+                if (sand != undefined) {
+
+                    // get sand type
+                    var sand_type = 0;
+
+                    if (sand.SandName.toLowerCase().indexOf('vàng') > -1 || sand.SandName.toLowerCase().indexOf('vang') > -1 ||
+                    sand.SandName.toLowerCase().indexOf('trộn') > -1 || sand.SandName.toLowerCase().indexOf('tron') > -1) {
+                        sand_type = GOLD_SAND_TYPE;
+                    }
+                    if (sand.SandName.toLowerCase().indexOf('lấp') > -1 || sand.SandName.toLowerCase().indexOf('lap') > -1) {
+                        sand_type = FILLING_SAND_TYPE;
+                    }
+
+                    // show barge volumes base on sand type
+                    switch (sand_type) {
+
+                        case FILLING_SAND_TYPE:
+                            $('.volume-revenue').val(barge.VolumeRevenue.format(0, 3, ',', '.'));
+                            $('.volume-purchase').val(barge.VolumePurchaseFillingSand.format(0, 3, ',', '.'));
+                            $('.volume-purchase-decrease').val(0);
+                            break;
+
+                        case GOLD_SAND_TYPE:
+                            $('.volume-revenue').val('0');
+                            $('.volume-purchase').val(barge.VolumePurchaseGoldSand.format(0, 3, ',', '.'));
+                            $('.volume-purchase-decrease').val(0);
+                            break;
+                    }
+                } // .end if
+            } // .end if
+
+            updateLinesSummary();
+        }
+
+
+        // process sand changed event
+        function setSelectedSand(sand_id) {
+
+            // reset sand prices
+            $('.customer-price').val(0);
+            $('.provider-price').val(0);
+            $('.base-transport-price').val(0);
+
+            // reset barge volumes
+            $('.volume-purchase').val(0);
+            $('.volume-purchase-decrease').val(0);
+            $('.volume-promotion').val(0);
+
+            // hide revenue/promotion volume
+            $('.volume-revenue-row').attr('style', 'display:none;');
+            $('.volume-promotion-row').attr('style', 'display:none;');
+
+            // get sand info
+            var sand = getSand(sand_id);
+
+            // show sand info
+            if (sand != undefined) {
+
+                g_selected_sand_id = sand_id;
+
+                // show sand prices
+                $('.customer-price').val(sand.CustomerPrice.format(0, 3, ',', '.'));
+                $('.provider-price').val(sand.ProviderPrice.format(0, 3, ',', '.'));
+                $('.base-transport-price').val(sand.TransportPrice.format(0, 3, ',', '.'));
+
+                var sand_type = getSandType(sand);
+                switch (sand_type) {
+                    case FILLING_SAND_TYPE:
+                        // remove style to show revenue volume input
+                        $('.volume-revenue-row').removeAttr('style');
+                        break;
+
+                    case GOLD_SAND_TYPE:
+                        // remove style to show promotion volume input
+                        $('.volume-promotion-row').removeAttr('style');
+                        break;
+                }
+
+                // show barge info
+                var barge = getBarge(g_selected_barge_id);
+                if (barge != undefined && sand_type > 0) {
+                    switch (sand_type) {
+                        case FILLING_SAND_TYPE:
+                            $('.volume-revenue').val(barge.VolumeRevenue.format(0, 3, ',', '.'));
+                            $('.volume-purchase').val(barge.VolumePurchaseFillingSand.format(0, 3, ',', '.'));
+                            $('.volume-purchase-decrease').val(0);
+                            
+                            break;
+
+                        case GOLD_SAND_TYPE:
+                            $('.volume-revenue').val(0);
+                            $('.volume-purchase').val(barge.VolumePurchaseGoldSand.format(0, 3, ',', '.'));
+                            $('.volume-purchase-decrease').val(0);
+                            break;
+                    } 
+                } // .end if barge
+            }
+            updateLinesPrice(sand.TransportPrice);
+        }
+
+        // Functon to add new so details data input form
+        function addLine() {
+            var container = $('.tb-details-content');
+            var row_count = $('.tb-details-content .tb-row-details').length;
+            var transport_price = $('.base-transport-price').val();
+            var html = '';
+
+            if (row_count == undefined) row_count = 0;
+
+            // generate new order details html line
+            html += '<tr class="editor-field tb-row-details">\r\n';
+            // command buttons
+            html += '    <td>\r\n';
+            html += '        <a href="#" class="btn btn-danger btn-sm" onclick="return removeLine($(this).parent().parent());" style="width:30px;">-</a>\r\n';
+            html += '    </td>\r\n';
+            // boat select
+            html += '    <td>\r\n';
+            html += '        <select class="line-boat-select form-control" data-val="true" data-val-required="Vui lòng chọn ghe" id="OrderDetails_' + row_count + '__BoatId" name="OrderDetails[' + row_count + '].BoatId" onchange="updateLineValues($(this).parent().parent())" style="width:160px;">\r\n'
+            html += '                <option>-- Chọn ghe --</option>\r\n';
+            $.each(g_boats, function (index, element) {
+                html += '            <option value="' + element.BoatId + '">\u00A0\u00A0' + element.BoatCode + ' - ' + element.BoatOwner + '</option>\r\n';
+            })
+            html += '        </select>\r\n';
+            html += '        <span class="field-validation-valid" data-valmsg-for="OrderDetails[' + row_count + '].BoatId" data-valmsg-replace="true"></span>\r\n';
+            html += '    </td>\r\n';
+            // transport times
+            html += '    <td>\r\n';
+            html += '        <input value="0" class="line-transport-times form-control text-right number-input" data-val="true" data-val-required="Số chuyến không được rỗng" id="OrderDetails_' + row_count + '__TransportTimes" name="OrderDetails[' + row_count + '].TransportTimes" placeholder="0"  type="text" onKeyUp="updateLineValues($(this).parent().parent())" style="width:80px;">\r\n';
+            html += '        <span class="field-validation-valid" data-valmsg-for="OrderDetails[' + row_count + '].TransportTimes" data-valmsg-replace="true"></span>\r\n';
+            html += '    </td>\r\n';
+            // extra volume
+            html += '    <td>\r\n';
+            html += '        <input value="0" class="line-extra-volume form-control text-right number-input" data-val="true" data-val-required="Nhập khối lẻ" id="OrderDetails_' + row_count + '__ExtraVolume" name="OrderDetails[' + row_count + '].ExtraVolume" placeholder="0" onKeyUp="updateLineValues($(this).parent().parent())" style="width:80px;" type="text">\r\n';
+            html += '        <span class="field-validation-valid" data-valmsg-for="OrderDetails[' + row_count + '].ExtraVolume" data-valmsg-replace="true"></span>\r\n';
+            html += '    </td>\r\n';
+            // boat volume
+            html += '    <td>\r\n';
+            html += '        <input class="line-boat-volume form-control text-right number-input" data-val="true" data-val-required="Nhập khối ghe" id="OrderDetails_' + row_count + '__BoatVolume" name="OrderDetails[' + row_count + '].BoatVolume" placeholder="0" readonly = "readonly" style="width:80px;" type="text">\r\n';
+            html += '        <span class="field-validation-valid" data-valmsg-for="OrderDetails[' + row_count + '].BoatVolume" data-valmsg-replace="true"></span>\r\n';
+            html += '    </td>\r\n';
+            // total volume
+            html += '    <td>\r\n';
+            html += '        <input class="line-total-volume form-control text-right" data-val="true" data-val-range="Tổng khối ghe phải > 0" data-val-range-max="1000" data-val-range-min="1"  id="OrderDetails_' + row_count + '__TotalVolume" name="OrderDetails[' + row_count + '].TotalVolume" placeholder="0" readonly="readonly" style="width:80px;" type="text">\r\n';
+            html += '        <span class="field-validation-valid" data-valmsg-for="OrderDetails[' + row_count + '].TotalVolume" data-valmsg-replace="true"></span>\r\n';
+            html += '    </td>\r\n';
+            // transport price
+            html += '    <td>\r\n';
+            html += '        <input value="' + transport_price + '" class="line-transport-price form-control text-right number-input" data-val="true" data-val-required="Cước vận chuyển không được rỗng" id="OrderDetails_' + row_count + '__TransportPrice" name="OrderDetails[' + row_count + '].TransportPrice" placeholder="0" onKeyUp="updateLineValues($(this).parent().parent())" style="width:80px;" type="text">\r\n';
+            html += '        <span class="field-validation-valid" data-valmsg-for="OrderDetails[' + row_count + '].TransportPrice" data-valmsg-replace="true"></span>\r\n';
+            html += '    </td>\r\n';
+            // transport amount
+            html += '    <td>\r\n';
+            html += '        <input class="line-amount form-control text-right number-input" id="OrderDetails_' + row_count + '__Amount" name="OrderDetails[' + row_count + '].Amount" placeholder="0" type="text" readonly="readonly" style="width:120px;">\r\n';
+            html += '    </td>\r\n';
+            html += '</tr>\r\n';
+
+            // insert new row details
+            $(container).append(html);
+
+            // re-setup validator/number input
+            $("form").removeData("validator");
+            $("form").removeData("unobtrusiveValidation");
+            $.validator.unobtrusive.parse("form");
+
+            // setup number inputs
+            $('.number-input').number(true, 0);
+
+            return false;
+        }
+
+        // Function to remove a so details
+        function removeLine(line) {
+            $(line).remove();
+            correctLinesName();
+            updateLinesSummary();
+        }
+
+        // Function to correct id/name of all row details elements
+        function correctLinesName() {
+            var order_details_rows = $('.tb-details-content .tb-row-details');
+            $.each(order_details_rows, function (index, element) {
+                // rename select elements
+                var select_elements = $(element).find('select');
+                $(select_elements[0]).attr('id', 'OrderDetails_' + index + '__BoatId');
+                $(select_elements[0]).attr('name', 'OrderDetails[' + index + '].BoatId');
+
+                // rename order input elements
+                var input_elements = $(element).find('input');
+                $(input_elements[0]).attr('id', 'OrderDetails_' + index + '__TransportTimes')
+                $(input_elements[0]).attr('name', 'OrderDetails[' + index + '].TransportTimes')
+                $(input_elements[1]).attr('id', 'OrderDetails_' + index + '__ExtraVolume')
+                $(input_elements[1]).attr('name', 'OrderDetails[' + index + '].ExtraVolume')
+                $(input_elements[2]).attr('id', 'OrderDetails_' + index + '__BoatVolume')
+                $(input_elements[2]).attr('name', 'OrderDetails[' + index + '].BoatVolume')
+                $(input_elements[3]).attr('id', 'OrderDetails_' + index + '__TotalVolume')
+                $(input_elements[3]).attr('name', 'OrderDetails[' + index + '].TotalVolume')
+                $(input_elements[4]).attr('id', 'OrderDetails_' + index + '__TransportPrice')
+                $(input_elements[4]).attr('name', 'OrderDetails[' + index + '].TransportPrice')
+                $(input_elements[5]).attr('id', 'OrderDetails_' + index + '__Amount')
+                $(input_elements[5]).attr('name', 'OrderDetails[' + index + '].Amount')
+
+                // rename valiation message elements
+                var validation_spans = $(element).find('span');
+                $(validation_spans[0]).attr('data-valmsg-for', 'OrderDetails[' + index + '].BoatId');
+                $(validation_spans[1]).attr('data-valmsg-for', 'OrderDetails[' + index + '].TransportTimes');
+                $(validation_spans[2]).attr('data-valmsg-for', 'OrderDetails[' + index + '].ExtraVolume');
+                $(validation_spans[3]).attr('data-valmsg-for', 'OrderDetails[' + index + '].BoatVolume');
+                $(validation_spans[4]).attr('data-valmsg-for', 'OrderDetails[' + index + '].TotalVolume');
+                $(validation_spans[5]).attr('data-valmsg-for', 'OrderDetails[' + index + '].TransportPrice');
+            })
+        }
+
+
+        /* Function to update line value */
+        function updateLineValues(line) {
+
+            // get controls
+            var boat_select_field = $(line).find('.line-boat-select');
+            var transport_times_field = $(line).find('.line-transport-times');
+            var extra_volume_field = $(line).find('.line-extra-volume');
+            var boat_volume_field = $(line).find('.line-boat-volume');
+            var total_volume_field = $(line).find('.line-total-volume');
+            var transport_price_field = $(line).find('.line-transport-price');
+            var amount_field = $(line).find('.line-amount');
+
+            // get select boat info
+            var selected_boat_id = $(boat_select_field).val();
+            var selected_boat = getBoat(selected_boat_id);
+            if (selected_boat != undefined) {
+                $(boat_volume_field).val(selected_boat.BoatVolume.format(0, 3, ',', '.'));
+            }
+
+            // calculate total boat volume, total price
+            var transport_times = parseFloat($(transport_times_field).val().replace(new RegExp(',', 'g'), ''));
+            var extra_volume = parseFloat($(extra_volume_field).val().replace(new RegExp(',', 'g'), ''));
+            var boat_volume = parseFloat($(boat_volume_field).val().replace(new RegExp(',', 'g'), ''));
+            var transport_price = parseFloat($(transport_price_field).val().replace(new RegExp(',', 'g'), ''));
+
+            if (isNaN(transport_times)) transport_times = 0;
+            if (isNaN(extra_volume)) extra_volume = 0;
+            if (isNaN(boat_volume)) boat_volume = 0;
+            if (isNaN(transport_price)) transport_price = 0;
+
+            var total_boat_volumes = transport_times * boat_volume + extra_volume;
+            var amount = total_boat_volumes * transport_price;
+
+            $(total_volume_field).val(total_boat_volumes.format(0, 3, ',', '.'));
+            $(amount_field).val(amount.format(0, 3, ',', '.'));
+
+            // lines summary
+            updateLinesSummary();
+        }
+
+        /* Function to set line transport price */
+        function updateLinesPrice(price) {
+            var lines = $('.tb-details-content .tb-row-details');
+            $.each(lines, function (index, line) {
+                var transport_price_field = $(line).find('.line-transport-price');
+                $(transport_price_field).val(price.format(0, 3, ',', '.'));
+                updateLineValues(line);
+            })
+
+            // lines summary
+            updateLinesSummary();
+        }
+
+        /* Function to update lines summary */
+        function updateLinesSummary() {
+            var total_transport_volumes = 0;
+            var total_transport_amount = 0;
+
+            var lines = $('.tb-details-content .tb-row-details');
+
+            // calculate line summary
+            $.each(lines, function (index, line) {
+                var line_volume_field = $(line).find('.line-total-volume');
+                var line_amount_field = $(line).find('.line-amount');
+
+                var line_volume = parseFloat($(line_volume_field).val().replace(new RegExp(',', 'g'), ''));
+                var line_amount = parseFloat($(line_amount_field).val().replace(new RegExp(',', 'g'), ''));
+
+                if (isNaN(line_volume)) line_volume = 0;
+                if (isNaN(line_amount)) line_amount = 0;
+
+                total_transport_volumes += line_volume;
+                total_transport_amount += line_amount;
+            });
+
+            $('.total-transport-volumes').html(total_transport_volumes.format(0, 3, ',', '.'));
+            $('.total-transport-amount').html(total_transport_amount.format(0, 3, ',', '.'));
+
+            // calulcate revenue / purchase / profit
+            var revenue_volume = parseFloat($('.volume-revenue').val().replace(new RegExp(',', 'g'), ''));
+            var promotion_volume = parseFloat($('.volume-promotion').val().replace(new RegExp(',', 'g'), ''));
+            var purchase_volume = parseFloat($('.volume-purchase').val().replace(new RegExp(',', 'g'), ''));
+            var purchase_volume_decrease = parseFloat($('.volume-purchase-decrease').val().replace(new RegExp(',', 'g'), ''));
+            var customer_price = parseFloat($('.customer-price').val().replace(new RegExp(',', 'g'), ''));
+            var provider_price = parseFloat($('.provider-price').val().replace(new RegExp(',', 'g'), ''));
+            var transport_price = parseFloat($('.base-transport-price').val().replace(new RegExp(',', 'g'), ''));
+
+            if (isNaN(revenue_volume)) revenue_volume = 0;
+            if (isNaN(promotion_volume)) promotion_volume = 0;
+            if (isNaN(purchase_volume)) purchase_volume = 0;
+            if (isNaN(purchase_volume_decrease)) purchase_volume_decrease = 0;
+            if (isNaN(customer_price)) customer_price = 0;
+            if (isNaN(provider_price)) provider_price = 0;
+            if (isNaN(transport_price)) transport_price = 0;
+
+            var purchase_amount = (purchase_volume - purchase_volume_decrease) * provider_price;
+            var transport_amount = total_transport_amount;
+
+            // calulcate revenue
+            var revenue_amount = 0;
+            var sand = getSand(g_selected_sand_id);
+            if (sand != undefined) {
+                var sand_type = getSandType(sand);
+                switch (sand_type) {
+                    case GOLD_SAND_TYPE:
+                        revenue_amount = (total_transport_volumes - promotion_volume) * customer_price + promotion_volume * transport_price;
+                        break;
+                    case FILLING_SAND_TYPE:
+                        revenue_amount = revenue_volume * customer_price;
+                        break;
+                }
+            }
+
+            // calculate profit
+            var profit_amount = revenue_amount - purchase_amount - transport_amount;
+
+            $('.revenue-amount').html(revenue_amount.format(0, 3, ',', '.'));
+            $('.purchase-amount').html(purchase_amount.format(0, 3, ',', '.'));
+            $('.transport-amount').html(total_transport_amount.format(0, 3, ',', '.'));
+            $('.profit-amount').html(profit_amount.format(0, 3, ',', '.'));
+        }
+
+        // function to get sand type
+        function getSandType(sand) {
+            if (sand != undefined) {
+                var sand_name = sand.SandName.toLowerCase();
+                if (sand_name.indexOf('vàng') > -1 || sand_name.indexOf('vang') > -1 ||
+                    sand_name.indexOf('trộn') > -1 || sand_name.indexOf('tron') > -1) {
+                    return GOLD_SAND_TYPE;
+                }
+                if (sand_name.indexOf('lấp') > -1 || sand_name.indexOf('lap') > -1) {
+                    return FILLING_SAND_TYPE;
+                }
+            }
+            return -1; // unknown sand type
+        }
+
+    </script>
+}
+
